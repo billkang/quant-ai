@@ -13,3 +13,4 @@ pydantic-settings
 httpx
 websockets
 ruff
+apscheduler

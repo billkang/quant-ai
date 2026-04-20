@@ -11,13 +11,16 @@ from src.models import crud
 from src.models.database import Base, engine, get_db
 from src.services.ai_analysis import ai_service
 from src.services.news import news_service
+from src.services.scheduler import scheduler_service
 from src.services.stock_data import stock_service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    await scheduler_service.start()
     yield
+    await scheduler_service.stop()
 
 
 app = FastAPI(title="Quant AI API", version="0.1.0", lifespan=lifespan)
