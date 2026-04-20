@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+redis
+akshare
+yfinance
+pandas
+numpy
+python-dotenv
+pydantic
+pydantic-settings
+httpx
+websockets
+ruff

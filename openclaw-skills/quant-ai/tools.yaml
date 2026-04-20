@@ -1,0 +1,83 @@
+tools:
+  - name: quant_stock_quote
+    description: 查询股票实时行情
+    parameters:
+      type: object
+      properties:
+        code:
+          type: string
+          description: 股票代码 (如 600519 或 00700)
+      required:
+        - code
+
+  - name: quant_stock_news
+    description: 查询股票相关新闻
+    parameters:
+      type: object
+      properties:
+        code:
+          type: string
+          description: 股票代码
+      required:
+        - code
+
+  - name: quant_stock_analyze
+    description: AI 分析股票
+    parameters:
+      type: object
+      properties:
+        code:
+          type: string
+          description: 股票代码
+      required:
+        - code
+
+  - name: quant_watchlist
+    description: 查看自选股列表
+    parameters:
+      type: object
+      properties: {}
+
+  - name: quant_portfolio
+    description: 查看持仓
+    parameters:
+      type: object
+      properties: {}
+
+  - name: quant_chat
+    description: AI 问答
+    parameters:
+      type: object
+      properties:
+        question:
+          type: string
+          description: 问题内容
+      required:
+        - question
+
+prompts:
+  analyze:
+    - 帮分析一下 {code} 这只股票
+    - {code} 怎么样
+    - 分析 600519
+
+  quote:
+    - 查一下 {code} 的行情
+    - {code} 现在多少
+    - 600519 行情
+
+  news:
+    - {code} 有什么新闻
+    - 查 {code} 新闻
+
+  watchlist:
+    - 我的自选股
+    - 查看自选股
+
+  portfolio:
+    - 我的持仓
+    - 查看持仓
+
+  chat:
+    - 问：.*
+    - (.*) 怎么样

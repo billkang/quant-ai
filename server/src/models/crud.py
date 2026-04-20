@@ -1,0 +1,67 @@
+from sqlalchemy.orm import Session
+
+from src.models import models
+from src.models.database import Base, engine
+
+
+def init_db():
+    Base.metadata.create_all(bind=engine)
+
+
+def get_watchlist(db: Session) -> list[models.Watchlist]:
+    return db.query(models.Watchlist).all()
+
+
+def add_to_watchlist(db: Session, stock_code: str) -> models.Watchlist:
+    watch = models.Watchlist(stock_code=stock_code)
+    db.add(watch)
+    db.commit()
+    db.refresh(watch)
+    return watch
+
+
+def remove_from_watchlist(db: Session, stock_code: str) -> bool:
+    watch = db.query(models.Watchlist).filter(models.Watchlist.stock_code == stock_code).first()
+    if watch:
+        db.delete(watch)
+        db.commit()
+        return True
+    return False
+
+
+def get_positions(db: Session) -> list[models.Position]:
+    return db.query(models.Position).all()
+
+
+def add_position(db: Session, stock_code: str, stock_name: str, quantity: int, cost_price: float, buy_date) -> models.Position:
+    position = models.Position(
+        stock_code=stock_code,
+        stock_name=stock_name,
+        quantity=quantity,
+        cost_price=cost_price,
+        buy_date=buy_date
+    )
+    db.add(position)
+    db.commit()
+    db.refresh(position)
+    return position
+
+
+def get_transactions(db: Session, limit: int = 50) -> list[models.Transaction]:
+    return db.query(models.Transaction).order_by(models.Transaction.trade_date.desc()).limit(limit).all()
+
+
+def add_transaction(db: Session, stock_code: str, stock_name: str, trans_type: str, quantity: int, price: float, commission: float, trade_date) -> models.Transaction:
+    transaction = models.Transaction(
+        stock_code=stock_code,
+        stock_name=stock_name,
+        type=trans_type,
+        quantity=quantity,
+        price=price,
+        commission=commission,
+        trade_date=trade_date
+    )
+    db.add(transaction)
+    db.commit()
+    db.refresh(transaction)
+    return transaction

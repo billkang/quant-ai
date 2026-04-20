@@ -1,0 +1,68 @@
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:16-alpine
+    container_name: quant-ai-db
+    environment:
+      POSTGRES_USER: quantai
+      POSTGRES_PASSWORD: quantai123
+      POSTGRES_DB: quant_ai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quantai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: quant-ai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 后端服务
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: quant-ai-server
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://quantai:quantai123@postgres:5432/quant_ai
+      - REDIS_URL=redis://redis:6379/0
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_MODEL=deepseek-chat
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 前端服务 (Nginx)
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: quant-ai-client
+    ports:
+      - "4000:80"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
