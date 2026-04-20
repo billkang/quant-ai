@@ -50,7 +50,7 @@ class StockDataService:
             print(f"Error fetching A stock quote: {e}")
             return None
 
-def get_hk_stock_quote(self, symbol: str) -> dict | None:
+    def get_hk_stock_quote(self, symbol: str) -> dict | None:
         try:
             code = symbol.replace('.HK', '').replace('.US', '')
             headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -67,13 +67,6 @@ def get_hk_stock_quote(self, symbol: str) -> dict | None:
             data = resp.json()
             result = data.get('chart', {}).get('result', [])
             if not result:
-                return None
-            print(f"Response status: {resp.status_code}")
-            data = resp.json()
-            print(f"Response data: {data}")
-            result = data.get('chart', {}).get('result', [])
-            if not result:
-                print(f"No result for {symbol}")
                 return None
             meta = result[0].get('meta', {})
             return {
@@ -162,42 +155,6 @@ def get_hk_stock_quote(self, symbol: str) -> dict | None:
             return klines
         except Exception as e:
             print(f"Error fetching {symbol} kline: {e}")
-            return []
-
-    def _old_hk_stock_kline(self, symbol: str, period: str = '1y') -> list:
-        try:
-            code = symbol.replace('.HK', '')
-            period_map = {'1d': '1d', '1mo': '1mo', '3mo': '3mo', '6mo': '6mo', '1y': '1y'}
-            p = period_map.get(period, '1y')
-            resp = requests.get(
-                "https://push2his.eastmoney.com/api/qt/stock/kline/get",
-                params={
-                    "secid": f"0.{code}",
-                    "fields1": "f1,f2,f3,f4,f5,f6",
-                    "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",
-                    "klt": 102 if p == '1mo' else 101,
-                    "fqt": 1,
-                    "end": "20500101",
-                    "lmt": 100,
-                },
-                timeout=5
-            )
-            data = resp.json()
-            klines = []
-            for d in data.get('data', {}).get('klines', []):
-                parts = d.split(',')
-                klines.append({
-                    '日期': parts[0],
-                    '开盘': float(parts[1]),
-                    '收盘': float(parts[2]),
-                    '最高': float(parts[3]),
-                    '最低': float(parts[4]),
-                    '成交量': int(parts[5]),
-                    '成交额': int(parts[6]) if len(parts) > 6 else 0,
-                })
-            return klines
-        except Exception as e:
-            print(f"Error fetching HK stock kline: {e}")
             return []
 
 
