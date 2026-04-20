@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { Card, Table, Statistic, Row, Col, Button, Typography, Space, Empty, Tag } from 'antd'
+import { ArrowUpOutlined, PlusOutlined } from '@ant-design/icons'
+
+const { Title, Text } = Typography
 
 interface Stock {
   code: string
@@ -10,6 +14,7 @@ interface Stock {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const [stocks, setStocks] = useState<Stock[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -21,72 +26,97 @@ export default function Dashboard() {
       .finally(() => setLoading(false))
   }, [])
 
+  const columns = [
+    {
+      title: 'Stock',
+      key: 'name',
+      render: (_: unknown, record: Stock) => (
+        <Space direction="vertical" size={0}>
+          <Link to={`/stock/${record.code}`} style={{ fontWeight: 500 }}>
+            {record.name}
+          </Link>
+          <Text type="secondary" style={{ fontSize: 12 }}>{record.code}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: 'Price',
+      dataIndex: 'price',
+      key: 'price',
+      align: 'right' as const,
+      render: (price: number) => price?.toFixed(2) || '-',
+    },
+    {
+      title: 'Change',
+      dataIndex: 'change',
+      key: 'change',
+      align: 'right' as const,
+      render: (change: number, record: Stock) => (
+        <Text type={record.changePercent >= 0 ? 'danger' : 'success'}>
+          {change?.toFixed(2) || '-'}
+        </Text>
+      ),
+    },
+    {
+      title: 'Change %',
+      dataIndex: 'changePercent',
+      key: 'changePercent',
+      align: 'right' as const,
+      render: (pct: number) => (
+        <Tag color={pct >= 0 ? 'red' : 'green'}>
+          {pct ? `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%` : '-'}
+        </Tag>
+      ),
+    },
+  ]
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">市场概览</h1>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={8}>
+          <Card>
+            <Statistic
+              title="Watchlist"
+              value={stocks.length}
+              suffix="stocks"
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card>
+            <Statistic
+              title="AI Analysis"
+              value="Ready"
+              valueStyle={{ color: '#1677ff', fontSize: 24 }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/watchlist')}>
+              Add Stock
+            </Button>
+          </Card>
+        </Col>
+      </Row>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-gray-500 text-sm">自选股数</div>
-          <div className="text-2xl font-bold">{stocks.length}</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-gray-500 text-sm">今日涨跌幅</div>
-          <div className="text-2xl font-bold text-green-600">
-            +1.23%
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-gray-500 text-sm">AI 建议</div>
-          <div className="text-2xl font-bold text-blue-600">
-            3 只关注
-          </div>
-        </div>
-      </div>
-
-      <h2 className="text-xl font-semibold mb-4">自选股行情</h2>
-      {loading ? (
-        <div className="text-gray-500">加载中...</div>
-      ) : stocks.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <p className="text-gray-500 mb-4">暂无自选股</p>
-          <Link to="/watchlist" className="text-blue-600 hover:underline">
-            去添加自选股 →
-          </Link>
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">股票</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">现价</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">涨跌</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">涨跌幅</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stocks.map(stock => (
-                <tr key={stock.code} className="border-t hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <Link to={`/stock/${stock.code}`} className="font-medium hover:text-blue-600">
-                      {stock.name}
-                    </Link>
-                    <div className="text-sm text-gray-500">{stock.code}</div>
-                  </td>
-                  <td className="px-4 py-3 text-right">{stock.price?.toFixed(2) || '-'}</td>
-                  <td className={`px-4 py-3 text-right ${stock.change >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                    {stock.change?.toFixed(2) || '-'}
-                  </td>
-                  <td className={`px-4 py-3 text-right ${stock.changePercent >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                    {stock.changePercent ? `${stock.changePercent >= 0 ? '+' : ''}${stock.changePercent.toFixed(2)}%` : '-'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <Card style={{ marginTop: 16 }}>
+        <Title level={4} style={{ marginBottom: 16 }}>My Watchlist</Title>
+        {loading ? null : stocks.length === 0 ? (
+          <Empty description="No stocks in watchlist" />
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={stocks}
+            rowKey="code"
+            pagination={false}
+            onRow={(record) => ({
+              onClick: () => navigate(`/stock/${record.code}`),
+              style: { cursor: 'pointer' }
+            })}
+          />
+        )}
+      </Card>
     </div>
   )
 }

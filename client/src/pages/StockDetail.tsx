@@ -1,6 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
-import { createChart, IChartApi } from 'lightweight-charts'
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import ReactECharts from 'echarts-for-react'
+import { Card, Row, Col, Statistic, Button, Space, Spin, Tag, Descriptions } from 'antd'
+import { ArrowUpOutlined, ArrowDownOutlined, LeftOutlined } from '@ant-design/icons'
+import type { DescriptionsProps } from 'antd'
 
 interface StockData {
   code: string
@@ -15,136 +18,160 @@ interface StockData {
 }
 
 interface KLine {
-  time: string
+  date: string
   open: number
+  close: number
   high: number
   low: number
-  close: number
   volume: number
 }
 
 export default function StockDetail() {
   const { code } = useParams<{ code: string }>()
-  const chartContainerRef = useRef<HTMLDivElement>(null)
-  const chartRef = useRef<IChartApi | null>(null)
+  const navigate = useNavigate()
   const [stock, setStock] = useState<StockData | null>(null)
   const [klines, setKlines] = useState<KLine[]>([])
   const [period, setPeriod] = useState('daily')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!code) return
-
+    setLoading(true)
     fetch(`/api/stocks/${code}`)
       .then(res => res.json())
       .then(data => setStock(data))
-      .catch(() => setStock(null))
+      .finally(() => setLoading(false))
+  }, [code])
 
-    fetch(`/api/stocks/${code}/kline?period=${period}`)
+  useEffect(() => {
+    if (!code) return
+    const periodMap: Record<string, string> = {
+      daily: '6mo',
+      weekly: '6mo',
+      monthly: '1y'
+    }
+    fetch(`/api/stocks/${code}/kline?period=${periodMap[period] || '6mo'}`)
       .then(res => res.json())
-      .then(data => {
-        setKlines(data)
-        renderChart(data)
-      })
-      .catch(() => setKlines([]))
+      .then(data => setKlines(data))
   }, [code, period])
 
-  const renderChart = (data: KLine[]) => {
-    if (!chartContainerRef.current || data.length === 0) return
+  const getChartOption = () => {
+    if (klines.length === 0) return {}
 
-    if (chartRef.current) {
-      chartRef.current.remove()
+    const dates = klines.map(k => k.date)
+    const opens = klines.map(k => k.open)
+    const closes = klines.map(k => k.close)
+
+    return {
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'cross' }
+      },
+      grid: [
+        { left: '10%', right: '8%', height: '50%' },
+        { left: '10%', right: '8%', top: '68%', height: '16%' }
+      ],
+      xAxis: [
+        { type: 'category', data: dates, gridIndex: 0 },
+        { type: 'category', data: dates, gridIndex: 1 }
+      ],
+      yAxis: [
+        { scale: true, gridIndex: 0 },
+        { scale: true, gridIndex: 1, splitNumber: 2 }
+      ],
+      dataZoom: [
+        { type: 'inside', xAxisIndex: [0, 1], start: 60, end: 100 }
+      ],
+      series: [
+        {
+          name: 'Kline',
+          type: 'candlestick',
+          data: klines.map(k => [k.open, k.close, k.low, k.high]),
+          itemStyle: {
+            color: '#ef4444',
+            color0: '#22c55e',
+            borderColor: '#ef4444',
+            borderColor0: '#22c55e'
+          }
+        },
+        {
+          name: 'Volume',
+          type: 'bar',
+          xAxisIndex: 1,
+          yAxisIndex: 1,
+          data: klines.map((k, i) => ({
+            value: k.volume,
+            itemStyle: {
+              color: closes[i] >= opens[i] ? '#ef4444' : '#22c55e'
+            }
+          }))
+        }
+      ]
     }
-
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: 400,
-    })
-
-    const candlestickSeries = chart.addCandlestickSeries()
-    candlestickSeries.setData(data.map(d => ({
-      time: d.time,
-      open: d.open,
-      high: d.high,
-      low: d.low,
-      close: d.close,
-    })))
-
-    chartRef.current = chart
   }
 
-  if (!stock) {
-    return <div className="text-gray-500">加载中...</div>
-  }
+  const priceChange = stock?.changePercent ?? 0
+  const isUp = priceChange >= 0
+
+  const items: DescriptionsProps['items'] = [
+    { key: '1', label: 'Open', children: stock?.open?.toFixed(2) || '-' },
+    { key: '2', label: 'High', children: stock?.high?.toFixed(2) || '-' },
+    { key: '3', label: 'Low', children: stock?.low?.toFixed(2) || '-' },
+    { key: '4', label: 'Volume', children: stock ? `${(stock.volume / 100000000).toFixed(2)}亿` : '-' },
+  ]
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">{stock.name}</h1>
-        <div className="text-gray-500">{stock.code}</div>
-      </div>
+    <Spin spinning={loading}>
+      <Card>
+        <Space style={{ marginBottom: 16 }}>
+          <Button icon={<LeftOutlined />} onClick={() => navigate('/watchlist')}>
+            返回
+          </Button>
+        </Space>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Statistic
+              title={stock?.name}
+              value={stock?.price}
+              precision={2}
+              prefix={isUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+              suffix=""
+              valueStyle={{ color: isUp ? '#ff4d4f' : '#52c41a' }}
+            />
+            <Tag color={isUp ? 'red' : 'green'} style={{ fontSize: 16, marginTop: 8 }}>
+              {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
+            </Tag>
+          </Col>
+          <Col span={12}>
+            <Descriptions items={items} column={2} size="small" />
+          </Col>
+        </Row>
+      </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-gray-500 text-sm">现价</div>
-          <div className="text-xl font-bold">{stock.price?.toFixed(2) || '-'}</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-gray-500 text-sm">涨跌</div>
-          <div className={`text-xl font-bold ${stock.change >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-            {stock.change?.toFixed(2) || '-'}
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-gray-500 text-sm">涨跌幅</div>
-          <div className={`text-xl font-bold ${stock.changePercent >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-            {stock.changePercent ? `${stock.changePercent >= 0 ? '+' : ''}${stock.changePercent.toFixed(2)}%` : '-'}
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-gray-500 text-sm">成交量</div>
-          <div className="text-xl font-bold">{(stock.volume / 100000000).toFixed(2)}亿</div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow mb-6">
-        <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="font-semibold">K线图</h2>
-          <div className="flex gap-2">
-            {['daily', 'weekly', 'monthly'].map(p => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1 rounded text-sm ${period === p ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
-              >
-                {p === 'daily' ? '日线' : p === 'weekly' ? '周线' : '月线'}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div ref={chartContainerRef} className="w-full" />
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-4">
-        <h2 className="font-semibold mb-4">技术指标</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <div className="text-gray-500">MA5</div>
-            <div className="font-medium">-</div>
-          </div>
-          <div>
-            <div className="text-gray-500">MA10</div>
-            <div className="font-medium">-</div>
-          </div>
-          <div>
-            <div className="text-gray-500">MA20</div>
-            <div className="font-medium">-</div>
-          </div>
-          <div>
-            <div className="text-gray-500">MACD</div>
-            <div className="font-medium">-</div>
-          </div>
-        </div>
-      </div>
-    </div>
+      <Card style={{ marginTop: 16 }}>
+        <Space style={{ marginBottom: 16 }}>
+          <span style={{ fontWeight: 500 }}>K线图</span>
+          <Button
+            type={period === 'daily' ? 'primary' : 'default'}
+            onClick={() => setPeriod('daily')}
+          >
+            日线
+          </Button>
+          <Button
+            type={period === 'weekly' ? 'primary' : 'default'}
+            onClick={() => setPeriod('weekly')}
+          >
+            周线
+          </Button>
+          <Button
+            type={period === 'monthly' ? 'primary' : 'default'}
+            onClick={() => setPeriod('monthly')}
+          >
+            月线
+          </Button>
+        </Space>
+        <ReactECharts option={getChartOption()} style={{ height: 500 }} />
+      </Card>
+    </Spin>
   )
 }

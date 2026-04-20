@@ -64,13 +64,22 @@ async def add_to_watchlist(stock_code: str, db: Session = Depends(get_db)):
     existing = db.query(crud.models.Watchlist).filter(crud.models.Watchlist.stock_code == stock_code).first()
     if existing:
         return {"status": "error", "message": "股票已存在"}
-    if stock_code.isdigit() and len(stock_code) == 6:
-        stock_info = stock_service.get_a_stock_quote(stock_code)
-    else:
-        stock_info = stock_service.get_hk_stock_quote(stock_code)
+
+    stock_info = _get_stock_by_code(stock_code)
     if not stock_info or not stock_info.get('name'):
         return {"status": "error", "message": "无法获取股票信息"}
+
     crud.add_to_watchlist(db, stock_code, stock_info.get('name', ''))
+
+    code_upper = stock_code.upper()
+    period = "6mo"
+    if '.HK' in code_upper or '.US' in code_upper:
+        kline_data = stock_service.get_hk_stock_kline(stock_code, period)
+    else:
+        kline_data = stock_service.get_a_stock_kline(stock_code, period)
+    if kline_data:
+        crud.save_stock_kline(db, stock_code, period, kline_data)
+
     return {"status": "ok", "stock_code": stock_code, "name": stock_info.get('name', '')}
 
 

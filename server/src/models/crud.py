@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from src.models import models
@@ -27,6 +29,30 @@ def remove_from_watchlist(db: Session, stock_code: str) -> bool:
         db.commit()
         return True
     return False
+
+
+def save_stock_kline(db: Session, stock_code: str, period: str, data: list) -> models.StockKline:
+    existing = db.query(models.StockKline).filter(
+        models.StockKline.stock_code == stock_code,
+        models.StockKline.period == period
+    ).first()
+    if existing:
+        existing.data = data
+        existing.updated_at = datetime.utcnow()
+        db.commit()
+        return existing
+    kline = models.StockKline(stock_code=stock_code, period=period, data=data)
+    db.add(kline)
+    db.commit()
+    db.refresh(kline)
+    return kline
+
+
+def get_stock_kline(db: Session, stock_code: str, period: str) -> models.StockKline | None:
+    return db.query(models.StockKline).filter(
+        models.StockKline.stock_code == stock_code,
+        models.StockKline.period == period
+    ).first()
 
 
 def get_positions(db: Session) -> list[models.Position]:

@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { Table, Button, Input, Space, Modal, message, Card, Typography, Tag, Popconfirm } from 'antd'
+
+const { Title } = Typography
 
 interface Stock {
   code: string
@@ -10,14 +14,10 @@ interface Stock {
 }
 
 export default function Watchlist() {
+  const navigate = useNavigate()
   const [stocks, setStocks] = useState<Stock[]>([])
   const [newCode, setNewCode] = useState('')
   const [loading, setLoading] = useState(true)
-  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; code: string; name: string }>({
-    show: false,
-    code: '',
-    name: ''
-  })
 
   useEffect(() => {
     fetchWatchlist()
@@ -40,136 +40,104 @@ export default function Watchlist() {
     try {
       const res = await axios.post(`/api/stocks/watchlist?stock_code=${newCode}`)
       if (res.data.status === 'error') {
-        alert(res.data.message || '添加失败')
+        message.error(res.data.message || '添加失败')
         return
       }
+      message.success(`已添加 ${res.data.name}`)
       setNewCode('')
       await fetchWatchlist()
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error) && error.response?.data?.message) {
-        alert(error.response.data.message)
-      } else {
-        console.error('Failed to add stock:', error)
-      }
-    }
-  }
-
-  const handleDeleteClick = (code: string, name: string) => {
-    setDeleteConfirm({ show: true, code, name })
-  }
-
-  const confirmDelete = async () => {
-    try {
-      await axios.delete(`/api/stocks/watchlist/${deleteConfirm.code}`)
-      setDeleteConfirm({ show: false, code: '', name: '' })
-      await fetchWatchlist()
     } catch (error) {
-      console.error('Failed to remove stock:', error)
+      message.error('添加失败')
     }
   }
 
-  const cancelDelete = () => {
-    setDeleteConfirm({ show: false, code: '', name: '' })
-  }
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      addStock()
-    }
-  }
+  const columns = [
+    {
+      title: '股票',
+      dataIndex: 'name',
+      key: 'name',
+      render: (_: unknown, record: Stock) => (
+        <Space direction="vertical" size={0}>
+          <span className="font-medium">{record.name}</span>
+          <span className="text-gray-400 text-sm">{record.code}</span>
+        </Space>
+      ),
+    },
+    {
+      title: '现价',
+      dataIndex: 'price',
+      key: 'price',
+      align: 'right' as const,
+      render: (price: number) => price?.toFixed(2) || '-',
+    },
+    {
+      title: '涨跌幅',
+      dataIndex: 'changePercent',
+      key: 'changePercent',
+      align: 'right' as const,
+      render: (pct: number) => (
+        <Tag color={pct >= 0 ? 'red' : 'green'}>
+          {pct ? `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%` : '-'}
+        </Tag>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      align: 'center' as const,
+      render: (_: unknown, record: Stock) => (
+        <Space>
+          <Button type="link" onClick={() => navigate(`/stock/${record.code}`)}>
+            详情
+          </Button>
+          <Popconfirm
+            title="确认删除"
+            description={`确定要从自选股中删除 ${record.name} 吗？`}
+            onConfirm={async () => {
+              try {
+                await axios.delete(`/api/stocks/watchlist/${record.code}`)
+                message.success('删除成功')
+                await fetchWatchlist()
+              } catch {
+                message.error('删除失败')
+              }
+            }}
+          >
+            <Button type="link" danger>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ]
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">自选股管理</h1>
+    <Card>
+      <Title level={2} className="mb-4">自选股管理</Title>
 
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="输入股票代码 (如: 600519 或 00700)"
+      <Card className="mb-4" bordered={false}>
+        <Space.Compact style={{ width: '100%' }}>
+          <Input
+            placeholder="输入股票代码 (如: 600519 或 00700.HK)"
             value={newCode}
             onChange={e => setNewCode(e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="flex-1 border rounded px-3 py-2"
+            onPressEnter={addStock}
           />
-          <button
-            onClick={addStock}
-            disabled={!newCode}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-          >
+          <Button type="primary" onClick={addStock} disabled={!newCode}>
             添加
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Space.Compact>
+      </Card>
 
-      <div className="bg-white rounded-lg shadow">
-        {loading ? (
-          <div className="px-4 py-8 text-center text-gray-500">加载中...</div>
-        ) : stocks.length === 0 ? (
-          <div className="px-4 py-8 text-center text-gray-500">
-            暂无自选股，请添加
-          </div>
-        ) : (
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">股票</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">现价</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">涨跌</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-500">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stocks.map(stock => (
-                <tr key={stock.code} className="border-t">
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{stock.name}</div>
-                    <div className="text-sm text-gray-500">{stock.code}</div>
-                  </td>
-                  <td className="px-4 py-3 text-right">{stock.price?.toFixed(2) || '-'}</td>
-                  <td className={`px-4 py-3 text-right ${stock.changePercent >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                    {stock.changePercent ? `${stock.changePercent >= 0 ? '+' : ''}${stock.changePercent.toFixed(2)}%` : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => handleDeleteClick(stock.code, stock.name)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      删除
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* 删除确认弹框 */}
-      {deleteConfirm.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-4">
-            <h3 className="text-lg font-semibold mb-4">确认删除</h3>
-            <p className="text-gray-600 mb-6">
-              确定要从自选股中删除 <span className="font-medium">{deleteConfirm.name}</span> ({deleteConfirm.code}) 吗？
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={cancelDelete}
-                className="px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                取消
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-              >
-                确定删除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <Table
+        columns={columns}
+        dataSource={stocks}
+        loading={loading}
+        rowKey="code"
+        pagination={false}
+        locale={{ emptyText: '暂无自选股，请添加' }}
+      />
+    </Card>
   )
 }

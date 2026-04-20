@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Float, Integer, String
+from sqlalchemy import Column, DateTime, Float, Integer, JSON, String
 
 from src.models.database import Base
 
@@ -22,6 +22,16 @@ class Watchlist(Base):
     stock_code = Column(String(20), index=True)
     stock_name = Column(String(100))
     added_at = Column(DateTime, default=datetime.utcnow)
+
+
+class StockKline(Base):
+    __tablename__ = "stock_kline"
+
+    id = Column(Integer, primary_key=True, index=True)
+    stock_code = Column(String(20), index=True)
+    period = Column(String(10))
+    data = Column(JSON)
+    updated_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Position(Base):

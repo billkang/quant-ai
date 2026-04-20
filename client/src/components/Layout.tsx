@@ -1,27 +1,38 @@
-import { Outlet, Link } from 'react-router-dom'
+import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Menu, Typography } from 'antd'
+
+const { Title } = Typography
+
+const menuItems = [
+  { key: '/', label: <Link to="/">首页</Link> },
+  { key: '/watchlist', label: <Link to="/watchlist">自选股</Link> },
+  { key: '/news', label: <Link to="/news">资讯</Link> },
+  { key: '/ai-advice', label: <Link to="/ai-advice">AI诊断</Link> },
+  { key: '/portfolio', label: <Link to="/portfolio">持仓</Link> },
+]
 
 export default function Layout() {
+  const location = useLocation()
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex justify-between h-14">
-            <div className="flex items-center space-x-8">
-              <Link to="/" className="font-bold text-lg text-blue-600">
-                Quant AI
-              </Link>
-              <div className="flex space-x-6">
-                <Link to="/" className="text-gray-600 hover:text-gray-900">首页</Link>
-                <Link to="/watchlist" className="text-gray-600 hover:text-gray-900">自选股</Link>
-                <Link to="/news" className="text-gray-600 hover:text-gray-900">资讯</Link>
-                <Link to="/ai-advice" className="text-gray-600 hover:text-gray-900">AI诊断</Link>
-                <Link to="/portfolio" className="text-gray-600 hover:text-gray-900">持仓</Link>
-              </div>
-            </div>
+    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
+      <div style={{ background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', height: 64 }}>
+            <Title level={4} style={{ margin: 0, marginRight: 40, color: '#1677ff' }}>
+              Quant AI
+            </Title>
+            <Menu
+              mode="horizontal"
+              selectedKeys={[location.pathname]}
+              items={menuItems}
+              style={{ flex: 1, border: 'none' }}
+              theme="light"
+            />
           </div>
         </div>
-      </nav>
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      </div>
+      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '24px' }}>
         <Outlet />
       </main>
     </div>

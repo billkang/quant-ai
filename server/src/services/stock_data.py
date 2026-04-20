@@ -106,13 +106,13 @@ class StockDataService:
             for d in data.get('data', {}).get('klines', []):
                 parts = d.split(',')
                 klines.append({
-                    '日期': parts[0],
-                    '开盘': float(parts[1]),
-                    '收盘': float(parts[2]),
-                    '最高': float(parts[3]),
-                    '最低': float(parts[4]),
-                    '成交量': int(parts[5]),
-                    '成交额': int(parts[6]) if len(parts) > 6 else 0,
+                    'date': parts[0],
+                    'open': float(parts[1]),
+                    'close': float(parts[2]),
+                    'high': float(parts[3]),
+                    'low': float(parts[4]),
+                    'volume': int(parts[5]),
+                    'amount': int(parts[6]) if len(parts) > 6 else 0,
                 })
             return klines
         except Exception as e:
@@ -145,12 +145,12 @@ class StockDataService:
             for i, ts in enumerate(timestamps):
                 from datetime import datetime
                 klines.append({
-                    '日期': datetime.fromtimestamp(ts).strftime('%Y-%m-%d'),
-                    '开盘': quote['open'][i] if quote.get('open') else 0,
-                    '收盘': quote['close'][i] if quote.get('close') else 0,
-                    '最高': quote['high'][i] if quote.get('high') else 0,
-                    '最低': quote['low'][i] if quote.get('low') else 0,
-                    '成交量': quote['volume'][i] if quote.get('volume') else 0,
+                    'date': datetime.fromtimestamp(ts).strftime('%Y-%m-%d'),
+                    'open': quote['open'][i] if quote.get('open') else 0,
+                    'close': quote['close'][i] if quote.get('close') else 0,
+                    'high': quote['high'][i] if quote.get('high') else 0,
+                    'low': quote['low'][i] if quote.get('low') else 0,
+                    'volume': quote['volume'][i] if quote.get('volume') else 0,
                 })
             return klines
         except Exception as e:
