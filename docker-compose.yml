@@ -1,12 +1,15 @@
 services:
+
   # PostgreSQL 数据库
   postgres:
     image: postgres:16-alpine
     container_name: quant-ai-db
+    env_file:
+      - ./server/.env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-quantai}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quantai123}
-      POSTGRES_DB: ${POSTGRES_DB:-quant_ai}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -39,11 +42,13 @@ services:
     container_name: quant-ai-server
     ports:
       - "8000:8000"
+    env_file:
+      - ./server/.env
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-quantai}:${POSTGRES_PASSWORD:-quantai123}@postgres:5432/${POSTGRES_DB:-quant_ai}
-      - REDIS_URL=redis://redis:6379/0
-      - AI_API_KEY=${AI_API_KEY:-}
-      - AI_MODEL=${AI_MODEL:-deepseek-chat}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=${REDIS_URL}
+      - AI_API_KEY=${AI_API_KEY}
+      - AI_MODEL=${AI_MODEL}
     depends_on:
       postgres:
         condition: service_healthy

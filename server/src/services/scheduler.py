@@ -5,8 +5,8 @@ from apscheduler.triggers.cron import CronTrigger
 
 from ..models import crud
 from ..models.database import SessionLocal
-from .news import fetch_stock_news
-from .stock_data import get_kline_data, get_realtime_data
+from .stock_data import stock_service
+from .news import news_service
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +53,8 @@ class SchedulerService:
             watchlist = crud.get_watchlist(db)
             for item in watchlist:
                 try:
-                    get_realtime_data(item.stock_code)
-                    get_kline_data(item.stock_code, period="1mo")
+                    stock_service.get_a_stock_quote(item.stock_code)
+                    stock_service.get_a_stock_kline(item.stock_code, "1mo")
                 except Exception as e:
                     logger.error(f"Failed to update {item.stock_code}: {e}")
             db.close()
@@ -69,7 +69,7 @@ class SchedulerService:
             watchlist = crud.get_watchlist(db)
             for item in watchlist:
                 try:
-                    fetch_stock_news(item.stock_code)
+                    news_service.get_stock_news(item.stock_code)
                 except Exception as e:
                     logger.error(f"Failed to fetch news for {item.stock_code}: {e}")
             db.close()

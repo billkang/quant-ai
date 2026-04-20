@@ -1,9 +1,11 @@
+import asyncio
 import random
 from datetime import datetime, timedelta
 
 import akshare as ak
 import pandas as pd
 import yfinance as yf
+from functools import lru_cache
 
 MOCK_STOCKS = {
     '600519': {'name': '贵州茅台', 'base_price': 1650.0},
@@ -18,24 +20,37 @@ MOCK_STOCKS = {
 
 
 class StockDataService:
+    _spot_cache = None
+    _cache_time = 0
+    CACHE_TTL = 60
+
     def get_a_stock_quote(self, symbol: str) -> dict | None:
         try:
-            df = ak.stock_zh_a_spot_em()
-            stock = df[df['代码'] == symbol]
-            if stock.empty:
-                return None
-            row = stock.iloc[0]
+            now = datetime.now().timestamp()
+            if self._spot_cache is None or now - self._cache_time > self.CACHE_TTL:
+                import requests
+                resp = requests.get(
+                    "https://push2.eastmoney.com/api/qt/clist/get",
+                    params={"pn": 1, "pz": 5000, "po": 1, "np": 1, "ut": "bd1d9ddb04089700cf9c27f6f7426281", "fltt": 2, "invt": 2, "fid": "f3", "fs": "m:0+t:6,m:0+t:80", "fields": "f1,f2,f3,f4,f5,f6,f7,f12,f13,f14"},
+                    timeout=5
+                )
+                data = resp.json()
+                self._spot_cache = {s['f12']: s for s in data.get('data', {}).get('diff', [])}
+                self._cache_time = now
+            stock = self._spot_cache.get(symbol)
+            if not stock:
+                return self._get_mock_quote(symbol, 'A')
             return {
                 'code': symbol,
-                'name': row['名称'],
-                'price': float(row['最新价']) if pd.notna(row['最新价']) else 0,
-                'change': float(row['涨跌幅']) if pd.notna(row['涨跌幅']) else 0,
-                'changePercent': float(row['涨跌幅']) if pd.notna(row['涨跌幅']) else 0,
-                'volume': float(row['成交量']) if pd.notna(row['成交量']) else 0,
-                'amount': float(row['成交额']) if pd.notna(row['成交额']) else 0,
-                'high': float(row['最高']) if pd.notna(row['最高']) else 0,
-                'low': float(row['最低']) if pd.notna(row['最低']) else 0,
-                'open': float(row['今开']) if pd.notna(row['今开']) else 0,
+                'name': stock.get('f14', ''),
+                'price': stock.get('f2', 0) or 0,
+                'change': stock.get('f4', 0) or 0,
+                'changePercent': stock.get('f3', 0) or 0,
+                'volume': stock.get('f5', 0) or 0,
+                'amount': stock.get('f6', 0) or 0,
+                'high': stock.get('f15', 0) or 0,
+                'low': stock.get('f16', 0) or 0,
+                'open': stock.get('f17', 0) or 0,
             }
         except Exception as e:
             print(f"Error fetching A stock quote: {e}")
@@ -43,18 +58,27 @@ class StockDataService:
 
     def get_hk_stock_quote(self, symbol: str) -> dict | None:
         try:
-            ticker = yf.Ticker(f"{symbol}.HK")
-            info = ticker.info
+            import requests as req
+            resp = req.get(
+                f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.HK",
+                timeout=5
+            )
+            data = resp.json()
+            result = data.get('chart', {}).get('result', [])
+            if not result:
+                return self._get_mock_quote(symbol, 'HK')
+            meta = result[0].get('meta', {})
+            quote = result[0].get('indicators', {}).get('quote', [{}])[0]
             return {
                 'code': symbol,
-                'name': info.get('longName', info.get('shortName', '')),
-                'price': info.get('currentPrice', 0),
-                'change': info.get('regularMarketChange', 0),
-                'changePercent': info.get('regularMarketChangePercent', 0),
-                'volume': info.get('volume', 0),
-                'high': info.get('fiftyTwoWeekHigh', 0),
-                'low': info.get('fiftyTwoWeekLow', 0),
-                'open': info.get('regularMarketOpen', 0),
+                'name': meta.get('shortName', meta.get('symbol', '')),
+                'price': meta.get('previousClose', 0),
+                'change': 0,
+                'changePercent': 0,
+                'volume': meta.get('volume', 0),
+                'high': meta.get('chartPreviousClose', 0),
+                'low': meta.get('chartPreviousClose', 0),
+                'open': meta.get('chartPreviousClose', 0),
             }
         except Exception as e:
             print(f"Error fetching HK stock quote: {e}")
@@ -80,22 +104,68 @@ class StockDataService:
 
     def get_a_stock_kline(self, symbol: str, period: str = 'daily') -> list:
         try:
-            if period == 'daily':
-                df = ak.stock_zh_a_hist(symbol=symbol, period='daily', adjust='qfq')
-            elif period == 'weekly':
-                df = ak.stock_zh_a_hist(symbol=symbol, period='weekly', adjust='qfq')
-            else:
-                df = ak.stock_zh_a_hist(symbol=symbol, period='monthly', adjust='qfq')
-            return df.tail(100).to_dict('records')
+            import requests as req
+            period_map = {'daily': '101', 'weekly': '102', 'monthly': '103'}
+            p = period_map.get(period, '101')
+            resp = req.get(
+                "https://push2his.eastmoney.com/api/qt/stock/kline/get",
+                params={
+                    "secid": f"1.{symbol}",
+                    "fields1": "f1,f2,f3,f4,f5,f6",
+                    "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",
+                    "klt": p,
+                    "fqt": 1,
+                    "end": "20500101",
+                    "lmt": 100,
+                },
+                timeout=5
+            )
+            data = resp.json()
+            klines = []
+            for d in data.get('data', {}).get('klines', []):
+                parts = d.split(',')
+                klines.append({
+                    '日期': parts[0],
+                    '开盘': float(parts[1]),
+                    '收盘': float(parts[2]),
+                    '最高': float(parts[3]),
+                    '最低': float(parts[4]),
+                    '成交量': int(parts[5]),
+                    '成交额': int(parts[6]) if len(parts) > 6 else 0,
+                })
+            return klines
         except Exception as e:
             print(f"Error fetching A stock kline: {e}")
             return self._get_mock_kline(symbol)
 
     def get_hk_stock_kline(self, symbol: str, period: str = '1y') -> list:
         try:
-            ticker = yf.Ticker(f"{symbol}.HK")
-            df = ticker.history(period=period)
-            return df.to_dict('records')
+            import requests as req
+            period_map = {'1d': '1d', '1mo': '1mo', '3mo': '3mo', '6mo': '6mo', '1y': '1y', '5y': '5y'}
+            p = period_map.get(period, '1y')
+            resp = req.get(
+                f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.HK",
+                params={"range": p, "interval": "1d"},
+                timeout=5
+            )
+            data = resp.json()
+            result = data.get('chart', {}).get('result', [])
+            if not result:
+                return self._get_mock_kline(symbol)
+            quote = result[0].get('indicators', {}).get('quote', [{}])[0]
+            timestamps = result[0].get('timestamp', [])
+            klines = []
+            for i, ts in enumerate(timestamps):
+                import datetime
+                klines.append({
+                    '日期': datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d'),
+                    '开盘': quote['open'][i] if quote.get('open') else 0,
+                    '收盘': quote['close'][i] if quote.get('close') else 0,
+                    '最高': quote['high'][i] if quote.get('high') else 0,
+                    '最低': quote['low'][i] if quote.get('low') else 0,
+                    '成交量': quote['volume'][i] if quote.get('volume') else 0,
+                })
+            return klines
         except Exception as e:
             print(f"Error fetching HK stock kline: {e}")
             return self._get_mock_kline(symbol)
