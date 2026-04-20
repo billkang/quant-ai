@@ -36,6 +36,16 @@ app.add_middleware(
 redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
 
 
+def _get_stock_by_code(code: str) -> dict | None:
+    code_upper = code.upper()
+    if '.HK' in code_upper:
+        return stock_service.get_hk_stock_quote(code)
+    elif '.US' in code_upper:
+        return stock_service.get_hk_stock_quote(code)
+    else:
+        return stock_service.get_a_stock_quote(code)
+
+
 @app.get("/api/stocks/watchlist")
 async def get_watchlist(db: Session = Depends(get_db)):
     watchlist = crud.get_watchlist(db)
@@ -43,11 +53,7 @@ async def get_watchlist(db: Session = Depends(get_db)):
         return []
     result = []
     for watch in watchlist:
-        code = watch.stock_code
-        if code.isdigit() and len(code) == 6:
-            stock = stock_service.get_a_stock_quote(code)
-        else:
-            stock = stock_service.get_hk_stock_quote(code)
+        stock = _get_stock_by_code(watch.stock_code)
         if stock:
             result.append(stock)
     return result
@@ -55,12 +61,17 @@ async def get_watchlist(db: Session = Depends(get_db)):
 
 @app.post("/api/stocks/watchlist")
 async def add_to_watchlist(stock_code: str, db: Session = Depends(get_db)):
-    # Check if already exists
     existing = db.query(crud.models.Watchlist).filter(crud.models.Watchlist.stock_code == stock_code).first()
     if existing:
         return {"status": "error", "message": "股票已存在"}
-    crud.add_to_watchlist(db, stock_code)
-    return {"status": "ok", "stock_code": stock_code}
+    if stock_code.isdigit() and len(stock_code) == 6:
+        stock_info = stock_service.get_a_stock_quote(stock_code)
+    else:
+        stock_info = stock_service.get_hk_stock_quote(stock_code)
+    if not stock_info or not stock_info.get('name'):
+        return {"status": "error", "message": "无法获取股票信息"}
+    crud.add_to_watchlist(db, stock_code, stock_info.get('name', ''))
+    return {"status": "ok", "stock_code": stock_code, "name": stock_info.get('name', '')}
 
 
 @app.delete("/api/stocks/watchlist/{stock_code}")
@@ -77,10 +88,7 @@ async def get_stock(code: str):
         import json
         return json.loads(cached)
 
-    if code.isdigit() and len(code) == 6:
-        stock = stock_service.get_a_stock_quote(code)
-    else:
-        stock = stock_service.get_hk_stock_quote(code)
+    stock = _get_stock_by_code(code)
 
     if stock:
         import json
@@ -90,10 +98,11 @@ async def get_stock(code: str):
 
 @app.get("/api/stocks/{code}/kline")
 async def get_kline(code: str, period: str = "daily"):
-    if code.isdigit() and len(code) == 6:
-        klines = stock_service.get_a_stock_kline(code, period)
-    else:
+    code_upper = code.upper()
+    if '.HK' in code_upper or '.US' in code_upper:
         klines = stock_service.get_hk_stock_kline(code, period)
+    else:
+        klines = stock_service.get_a_stock_kline(code, period)
     return klines
 
 

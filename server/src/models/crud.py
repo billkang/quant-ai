@@ -12,8 +12,8 @@ def get_watchlist(db: Session) -> list[models.Watchlist]:
     return db.query(models.Watchlist).all()
 
 
-def add_to_watchlist(db: Session, stock_code: str) -> models.Watchlist:
-    watch = models.Watchlist(stock_code=stock_code)
+def add_to_watchlist(db: Session, stock_code: str, stock_name: str = "") -> models.Watchlist:
+    watch = models.Watchlist(stock_code=stock_code, stock_name=stock_name)
     db.add(watch)
     db.commit()
     db.refresh(watch)

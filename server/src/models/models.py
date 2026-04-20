@@ -20,6 +20,7 @@ class Watchlist(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     stock_code = Column(String(20), index=True)
+    stock_name = Column(String(100))
     added_at = Column(DateTime, default=datetime.utcnow)
 
 
