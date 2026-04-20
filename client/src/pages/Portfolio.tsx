@@ -32,6 +32,11 @@ export default function Portfolio() {
     quantity: '',
     cost_price: ''
   })
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; code: string; name: string }>({
+    show: false,
+    code: '',
+    name: ''
+  })
 
   useEffect(() => {
     fetchPortfolio()
@@ -65,6 +70,24 @@ export default function Portfolio() {
     } catch (error) {
       console.error('Failed to add position:', error)
     }
+  }
+
+  const handleDeleteClick = (code: string, name: string) => {
+    setDeleteConfirm({ show: true, code, name })
+  }
+
+  const confirmDelete = async () => {
+    try {
+      await axios.delete(`/api/portfolio/${deleteConfirm.code}`)
+      setDeleteConfirm({ show: false, code: '', name: '' })
+      await fetchPortfolio()
+    } catch (error) {
+      console.error('Failed to delete position:', error)
+    }
+  }
+
+  const cancelDelete = () => {
+    setDeleteConfirm({ show: false, code: '', name: '' })
   }
 
   const totalProfitPercent = data.totalCost > 0
@@ -170,6 +193,7 @@ export default function Portfolio() {
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">现价</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">盈亏</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">盈亏比</th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-gray-500">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -188,12 +212,46 @@ export default function Portfolio() {
                   <td className={`px-4 py-3 text-right ${pos.profitPercent >= 0 ? 'text-red-500' : 'text-green-500'}`}>
                     {pos.profitPercent >= 0 ? '+' : ''}{pos.profitPercent.toFixed(2)}%
                   </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => handleDeleteClick(pos.code, pos.name)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      删除
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {/* 删除确认弹框 */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-4">
+            <h3 className="text-lg font-semibold mb-4">确认删除</h3>
+            <p className="text-gray-600 mb-6">
+              确定要删除持仓 <span className="font-medium">{deleteConfirm.name}</span> ({deleteConfirm.code}) 吗？
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                确定删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

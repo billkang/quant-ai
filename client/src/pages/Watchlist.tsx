@@ -13,6 +13,11 @@ export default function Watchlist() {
   const [stocks, setStocks] = useState<Stock[]>([])
   const [newCode, setNewCode] = useState('')
   const [loading, setLoading] = useState(true)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; code: string; name: string }>({
+    show: false,
+    code: '',
+    name: ''
+  })
 
   useEffect(() => {
     fetchWatchlist()
@@ -33,21 +38,38 @@ export default function Watchlist() {
   const addStock = async () => {
     if (!newCode) return
     try {
-      await axios.post(`/api/stocks/watchlist?stock_code=${newCode}`)
+      const res = await axios.post(`/api/stocks/watchlist?stock_code=${newCode}`)
+      if (res.data.status === 'error') {
+        alert(res.data.message || '添加失败')
+        return
+      }
       setNewCode('')
       await fetchWatchlist()
-    } catch (error) {
-      console.error('Failed to add stock:', error)
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        alert(error.response.data.message)
+      } else {
+        console.error('Failed to add stock:', error)
+      }
     }
   }
 
-  const removeStock = async (code: string) => {
+  const handleDeleteClick = (code: string, name: string) => {
+    setDeleteConfirm({ show: true, code, name })
+  }
+
+  const confirmDelete = async () => {
     try {
-      await axios.delete(`/api/stocks/watchlist/${code}`)
+      await axios.delete(`/api/stocks/watchlist/${deleteConfirm.code}`)
+      setDeleteConfirm({ show: false, code: '', name: '' })
       await fetchWatchlist()
     } catch (error) {
       console.error('Failed to remove stock:', error)
     }
+  }
+
+  const cancelDelete = () => {
+    setDeleteConfirm({ show: false, code: '', name: '' })
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -110,7 +132,7 @@ export default function Watchlist() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button
-                      onClick={() => removeStock(stock.code)}
+                      onClick={() => handleDeleteClick(stock.code, stock.name)}
                       className="text-red-600 hover:text-red-800"
                     >
                       删除
@@ -122,6 +144,32 @@ export default function Watchlist() {
           </table>
         )}
       </div>
+
+      {/* 删除确认弹框 */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-4">
+            <h3 className="text-lg font-semibold mb-4">确认删除</h3>
+            <p className="text-gray-600 mb-6">
+              确定要从自选股中删除 <span className="font-medium">{deleteConfirm.name}</span> ({deleteConfirm.code}) 吗？
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                确定删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

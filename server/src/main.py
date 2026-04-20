@@ -52,6 +52,10 @@ async def get_watchlist(db: Session = Depends(get_db)):
 
 @app.post("/api/stocks/watchlist")
 async def add_to_watchlist(stock_code: str, db: Session = Depends(get_db)):
+    # Check if already exists
+    existing = db.query(crud.models.Watchlist).filter(crud.models.Watchlist.stock_code == stock_code).first()
+    if existing:
+        return {"status": "error", "message": "股票已存在"}
     crud.add_to_watchlist(db, stock_code)
     return {"status": "ok", "stock_code": stock_code}
 
@@ -169,6 +173,12 @@ async def add_position(
 ):
     date = datetime.strptime(buy_date, '%Y-%m-%d') if buy_date else datetime.now()
     crud.add_position(db, stock_code, stock_name, quantity, cost_price, date)
+    return {"status": "ok"}
+
+
+@app.delete("/api/portfolio/{stock_code}")
+async def delete_position(stock_code: str, db: Session = Depends(get_db)):
+    crud.delete_position(db, stock_code)
     return {"status": "ok"}
 
 

@@ -33,6 +33,15 @@ def get_positions(db: Session) -> list[models.Position]:
     return db.query(models.Position).all()
 
 
+def delete_position(db: Session, stock_code: str) -> bool:
+    position = db.query(models.Position).filter(models.Position.stock_code == stock_code).first()
+    if position:
+        db.delete(position)
+        db.commit()
+        return True
+    return False
+
+
 def add_position(db: Session, stock_code: str, stock_name: str, quantity: int, cost_price: float, buy_date) -> models.Position:
     position = models.Position(
         stock_code=stock_code,
