@@ -1,24 +1,59 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import axios from 'axios'
 
 interface Stock {
   code: string
   name: string
   price: number
   change: number
+  changePercent: number
 }
 
 export default function Watchlist() {
   const [stocks, setStocks] = useState<Stock[]>([])
   const [newCode, setNewCode] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  const addStock = () => {
-    if (!newCode) return
-    // TODO: API call to add stock
-    setNewCode('')
+  useEffect(() => {
+    fetchWatchlist()
+  }, [])
+
+  const fetchWatchlist = async () => {
+    try {
+      setLoading(true)
+      const res = await axios.get('/api/stocks/watchlist')
+      setStocks(res.data || [])
+    } catch (error) {
+      console.error('Failed to fetch watchlist:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const removeStock = (code: string) => {
-    // TODO: API call to remove stock
+  const addStock = async () => {
+    if (!newCode) return
+    try {
+      await axios.post(`/api/stocks/watchlist?stock_code=${newCode}`)
+      setNewCode('')
+      await fetchWatchlist()
+    } catch (error) {
+      console.error('Failed to add stock:', error)
+    }
+  }
+
+  const removeStock = async (code: string) => {
+    try {
+      await axios.delete(`/api/stocks/watchlist/${code}`)
+      await fetchWatchlist()
+    } catch (error) {
+      console.error('Failed to remove stock:', error)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      addStock()
+    }
   }
 
   return (
@@ -29,14 +64,16 @@ export default function Watchlist() {
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="输入股票代码 (如: 600519 或 00700.HK)"
+            placeholder="输入股票代码 (如: 600519 或 00700)"
             value={newCode}
             onChange={e => setNewCode(e.target.value)}
+            onKeyPress={handleKeyPress}
             className="flex-1 border rounded px-3 py-2"
           />
           <button
             onClick={addStock}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            disabled={!newCode}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
           >
             添加
           </button>
@@ -44,32 +81,32 @@ export default function Watchlist() {
       </div>
 
       <div className="bg-white rounded-lg shadow">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">股票</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">现价</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">涨跌</th>
-              <th className="px-4 py-3 text-center text-sm font-medium text-gray-500">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stocks.length === 0 ? (
+        {loading ? (
+          <div className="px-4 py-8 text-center text-gray-500">加载中...</div>
+        ) : stocks.length === 0 ? (
+          <div className="px-4 py-8 text-center text-gray-500">
+            暂无自选股，请添加
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gray-50">
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
-                  暂无自选股，请添加
-                </td>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">股票</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">现价</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">涨跌</th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-gray-500">操作</th>
               </tr>
-            ) : (
-              stocks.map(stock => (
+            </thead>
+            <tbody>
+              {stocks.map(stock => (
                 <tr key={stock.code} className="border-t">
                   <td className="px-4 py-3">
                     <div className="font-medium">{stock.name}</div>
                     <div className="text-sm text-gray-500">{stock.code}</div>
                   </td>
                   <td className="px-4 py-3 text-right">{stock.price?.toFixed(2) || '-'}</td>
-                  <td className={`px-4 py-3 text-right ${stock.change >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                    {stock.change?.toFixed(2) || '-'}
+                  <td className={`px-4 py-3 text-right ${stock.changePercent >= 0 ? 'text-red-500' : 'text-green-500'}`}>
+                    {stock.changePercent ? `${stock.changePercent >= 0 ? '+' : ''}${stock.changePercent.toFixed(2)}%` : '-'}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button
@@ -80,10 +117,10 @@ export default function Watchlist() {
                     </button>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )
