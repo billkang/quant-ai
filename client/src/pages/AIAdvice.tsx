@@ -29,7 +29,11 @@ export default function AIAdvice() {
     setLoading(true)
     setResult('')
 
-    fetch(`/api/ai/analyze?code=${stockCode}`)
+    fetch(`/api/ai/analyze/v2`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: stockCode, dimensions: ['fundamental', 'technical', 'risk'] }),
+    })
       .then(res => res.json())
       .then(data => {
         if (data.detail) {
@@ -37,6 +41,7 @@ export default function AIAdvice() {
           setResult('分析失败：' + data.detail)
         } else {
           setResult(data.advice || '未获取到分析结果')
+          fetchHistory()
         }
       })
       .catch(() => {
@@ -45,6 +50,19 @@ export default function AIAdvice() {
       })
       .finally(() => setLoading(false))
   }
+
+  const [history, setHistory] = useState<any[]>([])
+
+  const fetchHistory = () => {
+    fetch('/api/ai/history?limit=5')
+      .then(res => res.json())
+      .then(data => setHistory(data))
+      .catch(() => setHistory([]))
+  }
+
+  useEffect(() => {
+    fetchHistory()
+  }, [])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -160,6 +178,24 @@ export default function AIAdvice() {
           )}
         </Space>
       </Card>
+
+      {history.length > 0 && (
+        <Card style={{ borderRadius: 16, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+          <Title level={4} style={{ marginBottom: 16 }}>诊断历史</Title>
+          <Space direction="vertical" style={{ width: '100%' }} size="small">
+            {history.map((h, i) => (
+              <Card key={i} size="small" style={{ borderRadius: 8 }}>
+                <Space direction="vertical" size={0}>
+                  <Text strong>{h.stockName} ({h.stockCode})</Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {h.createdAt ? new Date(h.createdAt).toLocaleString() : ''}
+                  </Text>
+                </Space>
+              </Card>
+            ))}
+          </Space>
+        </Card>
+      )}
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={8}>

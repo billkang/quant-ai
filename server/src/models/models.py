@@ -71,3 +71,17 @@ class NewsSource(Base):
     enabled = Column(Integer, default=1)
     last_fetched_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class DiagnosticHistory(Base):
+    __tablename__ = "diagnostic_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    stock_code = Column(String(20), index=True)
+    stock_name = Column(String(100))
+    fundamental_analysis = Column(String)
+    technical_analysis = Column(String)
+    risk_analysis = Column(String)
+    final_report = Column(String)
+    score = Column(String(10))
+    created_at = Column(DateTime, default=datetime.utcnow)

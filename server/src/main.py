@@ -215,6 +215,57 @@ async def analyze_stock(code: str):
     return {"code": code, "advice": advice}
 
 
+class AnalyzeV2Request(BaseModel):
+    code: str
+    dimensions: list[str] = ["fundamental", "technical", "risk"]
+
+
+@app.post("/api/ai/analyze/v2")
+async def analyze_stock_v2(req: AnalyzeV2Request, db: Session = Depends(get_db)):
+    stock = await get_stock(req.code)
+    if not stock:
+        raise HTTPException(status_code=404, detail="股票不存在")
+
+    try:
+        from src.services.ai_diagnostic import diagnostic_service
+
+        news = news_service.get_stock_news(req.code)
+        advice = diagnostic_service.analyze(req.code, stock, news)
+
+        try:
+            crud.save_diagnostic_history(
+                db,
+                stock_code=req.code,
+                stock_name=stock.get("name", ""),
+                fundamental_analysis="",
+                technical_analysis="",
+                risk_analysis="",
+                final_report=advice,
+            )
+        except Exception:
+            pass
+
+        return {"code": req.code, "advice": advice}
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ai/history")
+async def get_diagnostic_history(code: str = None, limit: int = 10, db: Session = Depends(get_db)):
+    history = crud.get_diagnostic_history(db, code, limit)
+    return [
+        {
+            "id": h.id,
+            "stockCode": h.stock_code,
+            "stockName": h.stock_name,
+            "finalReport": h.final_report,
+            "score": h.score,
+            "createdAt": h.created_at.isoformat() if h.created_at else None,
+        }
+        for h in history
+    ]
+
+
 @app.get("/api/ai/chat")
 async def chat(question: str):
     stock_data = {"context": "量化投资助手"}

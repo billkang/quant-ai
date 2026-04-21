@@ -152,3 +152,37 @@ def update_fetch_time(db: Session, source_id: int) -> None:
     if source:
         source.last_fetched_at = datetime.utcnow()
         db.commit()
+
+
+def save_diagnostic_history(
+    db: Session,
+    stock_code: str,
+    stock_name: str,
+    fundamental_analysis: str,
+    technical_analysis: str,
+    risk_analysis: str,
+    final_report: str,
+    score: str = None,
+) -> models.DiagnosticHistory:
+    history = models.DiagnosticHistory(
+        stock_code=stock_code,
+        stock_name=stock_name,
+        fundamental_analysis=fundamental_analysis,
+        technical_analysis=technical_analysis,
+        risk_analysis=risk_analysis,
+        final_report=final_report,
+        score=score,
+    )
+    db.add(history)
+    db.commit()
+    db.refresh(history)
+    return history
+
+
+def get_diagnostic_history(
+    db: Session, stock_code: str = None, limit: int = 10
+) -> list[models.DiagnosticHistory]:
+    query = db.query(models.DiagnosticHistory)
+    if stock_code:
+        query = query.filter(models.DiagnosticHistory.stock_code == stock_code)
+    return query.order_by(models.DiagnosticHistory.created_at.desc()).limit(limit).all()
