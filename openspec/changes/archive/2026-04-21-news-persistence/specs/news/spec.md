@@ -1,4 +1,4 @@
-# News 资讯聚合主规格
+# News 资讯聚合（更新版）
 
 ## 功能概述
 
@@ -10,9 +10,6 @@
 ```
 GET /api/news?category={all|stock|macro}&symbol={code}
 ```
-- category: all (默认), stock, macro
-- symbol: 股票代码 (可选)
-
 Response:
 ```json
 [
@@ -25,48 +22,6 @@ Response:
     "url": "https://..."
   }
 ]
-```
-
-### 获取数据源列表
-```
-GET /api/news/sources
-```
-Response:
-```json
-[
-  {
-    "id": 1,
-    "name": "贵州茅台",
-    "sourceType": "stock_news",
-    "config": { "symbol": "600519" },
-    "intervalMinutes": 60,
-    "enabled": true,
-    "lastFetchedAt": "2024-01-15T10:30:00"
-  }
-]
-```
-
-### 添加数据源
-```
-POST /api/news/sources
-Body:
-{
-  "name": "贵州茅台",
-  "source_type": "stock_news",
-  "config": { "symbol": "600519" },
-  "interval_minutes": 60
-}
-```
-
-### 更新数据源
-```
-PUT /api/news/sources/{id}
-Body: { "enabled": false }
-```
-
-### 删除数据源
-```
-DELETE /api/news/sources/{id}
 ```
 
 ### 手动拉取（带判重）
@@ -86,27 +41,24 @@ Response:
 - `skipped`: 因间隔未到而跳过的次数
 - `new`: 新增新闻数量
 
-## 数据类型
-
-| 类型 | 说明 |
-|------|------|
-| stock_news | 股票新闻 |
-| stock_notices | 股票公告 |
-| macro_news | 宏观资讯 |
+### 获取数据源列表
+```
+GET /api/news/sources
+```
 
 ## 数据模型
 
 ### news_sources 表
 - id: 主键
 - name: 数据源名称
-- source_type: 类型
-- config: 配置 (JSON)
-- interval_minutes: 拉取周期
+- source_type: 类型 (stock_news/stock_notices/macro_news)
+- config: 配置 (JSON) - 包含 symbol 等
+- interval_minutes: 拉取间隔（分钟）
 - enabled: 是否启用
 - last_fetched_at: 上次拉取时间
 - created_at: 创建时间
 
-### news_articles 表
+### news_articles 表（新增）
 - id: 主键
 - source_id: 外键 → news_sources.id
 - title: 标题
