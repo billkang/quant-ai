@@ -1,20 +1,23 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Tech stack: React + Vite + Ant Design, FastAPI + SQLAlchemy, PostgreSQL + Redis
+  Domain: 量化投资辅助系统 (Quant AI)
+  Data sources: AkShare (A股), yfinance (港股)
+  Deployment: Docker Compose
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  tasks:
+    - Focus on MVP features first
+    - Use Ant Design components (not raw HTML) for UI
+    - Test changes with docker-compose up -d --build
+
+artifacts:
+  design:
+    - Include architecture decisions and trade-offs
+  spec:
+    - Use Gherkin-style scenarios (WHEN/THEN)
+    - List API endpoints with path and methods
+  tasks:
+    - Break into testable chunks
+    - Include verification steps
