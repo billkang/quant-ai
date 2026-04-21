@@ -12,7 +12,15 @@ import {
   message,
   Modal,
 } from 'antd'
-import { RobotOutlined, StockOutlined, BulbOutlined, RocketOutlined } from '@ant-design/icons'
+import {
+  RobotOutlined,
+  StockOutlined,
+  BulbOutlined,
+  ThunderboltOutlined,
+  HistoryOutlined,
+  AreaChartOutlined,
+  SafetyOutlined,
+} from '@ant-design/icons'
 
 const { Text, Title } = Typography
 
@@ -79,7 +87,6 @@ export default function AIAdvice() {
     if (!stockCode) return
     setLoading(true)
     setResult('')
-
     fetch(`/api/ai/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -102,290 +109,276 @@ export default function AIAdvice() {
       .finally(() => setLoading(false))
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <Card
+  const SectionCard = ({
+    title,
+    icon: Icon,
+    content,
+    color,
+  }: {
+    title: string
+    icon: React.ElementType
+    content?: string
+    color: string
+  }) => (
+    <div
+      style={{
+        padding: 16,
+        background: 'var(--bg-elevated)',
+        borderRadius: 'var(--radius-sm)',
+        borderLeft: `3px solid ${color}`,
+      }}
+    >
+      <Space size={8} style={{ marginBottom: 10 }}>
+        <Icon style={{ fontSize: 16, color }} />
+        <Text strong style={{ color: 'var(--text-primary)', fontSize: 13 }}>
+          {title}
+        </Text>
+      </Space>
+      <div
         style={{
-          borderRadius: 16,
-          border: 'none',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+          whiteSpace: 'pre-wrap',
+          lineHeight: 1.8,
+          color: 'var(--text-secondary)',
+          fontSize: 13,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 16,
-              background: 'rgba(255,255,255,0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <RobotOutlined style={{ fontSize: 32, color: '#fff' }} />
-          </div>
-          <div>
-            <Title level={3} style={{ margin: 0, color: '#fff' }}>
-              AI 智能诊断
-            </Title>
-            <Text style={{ color: 'rgba(255,255,255,0.8)' }}>
-              基于大数据+AI模型，提供专业投资分析建议
-            </Text>
-          </div>
-        </div>
+        {content || '暂无分析结果'}
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <Title level={3} style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>
+          AI 智能诊断
+        </Title>
+        <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+          基于真实指标数据的多维度智能分析
+        </Text>
+      </div>
+
+      <Card className="metric-card" bodyStyle={{ padding: '24px 28px' }}>
+        <Row gutter={[24, 16]} align="middle">
+          <Col flex="auto">
+            <Space.Compact style={{ width: '100%' }}>
+              <Select
+                style={{ width: '60%' }}
+                placeholder="选择股票代码"
+                showSearch
+                allowClear
+                optionFilterProp="children"
+                value={stockCode}
+                onChange={setStockCode}
+                size="large"
+                options={stocks.map(s => ({ value: s.code, label: `${s.name} (${s.code})` }))}
+              />
+              <Button
+                type="primary"
+                onClick={analyze}
+                disabled={loading || !stockCode}
+                loading={loading}
+                size="large"
+                style={{ width: '40%' }}
+              >
+                <ThunderboltOutlined /> {loading ? '分析中...' : '开始分析'}
+              </Button>
+            </Space.Compact>
+          </Col>
+        </Row>
       </Card>
 
-      <Card style={{ borderRadius: 16, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
+      {result && (
+        <Card
+          title={
+            <Space>
+              <BulbOutlined style={{ color: 'var(--accent)' }} />
+              <span style={{ fontWeight: 600 }}>诊断结果</span>
+            </Space>
+          }
+        >
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-              padding: '20px 24px',
-              background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%)',
-              borderRadius: 12,
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.8,
+              color: 'var(--text-primary)',
+              fontSize: 14,
+              padding: 8,
             }}
           >
-            <StockOutlined style={{ fontSize: 20, color: '#667eea' }} />
-            <Text strong style={{ fontSize: 15 }}>
-              选择自选股进行 AI 分析
-            </Text>
+            {result}
           </div>
+        </Card>
+      )}
 
-          <Space.Compact style={{ width: '100%' }}>
-            <Select
-              style={{ width: '65%', height: 44 }}
-              placeholder="选择股票代码"
-              showSearch
-              allowClear
-              optionFilterProp="children"
-              value={stockCode}
-              onChange={setStockCode}
-              size="large"
-              options={stocks.map(s => ({
-                value: s.code,
-                label: `${s.name} (${s.code})`,
-              }))}
-            />
-            <Button
-              type="primary"
-              onClick={analyze}
-              disabled={loading || !stockCode}
-              loading={loading}
-              size="large"
-              style={{
-                width: '35%',
-                borderRadius: 8,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none',
-                fontWeight: 600,
-              }}
-            >
-              <BulbOutlined />
-              {loading ? '分析中...' : '开始分析'}
-            </Button>
-          </Space.Compact>
-
-          <Divider style={{ margin: '12px 0' }} />
-
-          {result && (
-            <div style={{ padding: 24, background: '#fafafa', borderRadius: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <BulbOutlined style={{ fontSize: 20, color: '#faad14' }} />
-                <Title level={5} style={{ margin: 0 }}>
-                  AI 诊断结果
-                </Title>
-              </div>
-              <Divider style={{ margin: '12px 0' }} />
-              <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
-                {result.split('\n').map((line, i) => (
-                  <Text key={i}>
-                    {line}
-                    <br />
-                  </Text>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <Modal
-            title={`${detailData?.stockName} (${detailData?.stockCode}) - 诊断详情`}
-            open={detailOpen}
-            onCancel={() => setDetailOpen(false)}
-            footer={null}
-            width={700}
-            loading={detailLoading}
-          >
-            {detailData && (
-              <div>
-                <Text type="secondary">
-                  {detailData.createdAt ? new Date(detailData.createdAt).toLocaleString() : ''}
-                </Text>
-                {detailData.score && (
-                  <>
-                    <Divider />
-                    <Text style={{ fontSize: 18, color: '#52c41a' }} strong>
-                      评级：{detailData.score}
-                    </Text>
-                  </>
-                )}
-                <Divider />
-                <Title level={5}>基本面分析</Title>
-                <div
-                  style={{
-                    whiteSpace: 'pre-wrap',
-                    lineHeight: 1.8,
-                    marginBottom: 16,
-                    background: '#fafafa',
-                    padding: 12,
-                    borderRadius: 8,
-                  }}
-                >
-                  {detailData.fundamentalAnalysis || detailData.finalReport || '暂无'}
-                </div>
-                <Title level={5}>技术面分析</Title>
-                <div
-                  style={{
-                    whiteSpace: 'pre-wrap',
-                    lineHeight: 1.8,
-                    marginBottom: 16,
-                    background: '#fafafa',
-                    padding: 12,
-                    borderRadius: 8,
-                  }}
-                >
-                  {detailData.technicalAnalysis || '暂无'}
-                </div>
-                <Title level={5}>风险评估</Title>
-                <div
-                  style={{
-                    whiteSpace: 'pre-wrap',
-                    lineHeight: 1.8,
-                    marginBottom: 16,
-                    background: '#fafafa',
-                    padding: 12,
-                    borderRadius: 8,
-                  }}
-                >
-                  {detailData.riskAnalysis || '暂无'}
-                </div>
-                <Divider />
-                <Title level={5}>最终建议</Title>
-                <div
-                  style={{
-                    whiteSpace: 'pre-wrap',
-                    lineHeight: 1.8,
-                    background: '#f0f5ff',
-                    padding: 12,
-                    borderRadius: 8,
-                    border: '1px solid #adc6ff',
-                  }}
-                >
-                  {detailData.finalReport || '暂无'}
-                </div>
-              </div>
-            )}
-          </Modal>
-
-          {!result && !loading && stocks.length === 0 && (
-            <Empty
-              description="暂无自选股，请在首页添加自选股后使用 AI 诊断"
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-          )}
-
-          {!result && !loading && stocks.length > 0 && (
-            <Empty
-              description="请在上方选择股票进行 AI 诊断"
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-          )}
-        </Space>
-      </Card>
+      {!result && !loading && stocks.length === 0 && (
+        <Empty
+          description="暂无自选股，请在首页添加后使用 AI 诊断"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          style={{ padding: 60 }}
+        />
+      )}
+      {!result && !loading && stocks.length > 0 && (
+        <Empty
+          description="请在上方选择股票进行 AI 诊断"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          style={{ padding: 60 }}
+        />
+      )}
 
       {history.length > 0 && (
         <Card
-          style={{ borderRadius: 16, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+          title={
+            <Space>
+              <HistoryOutlined style={{ color: 'var(--accent)' }} />
+              <span style={{ fontWeight: 600 }}>诊断历史</span>
+            </Space>
+          }
         >
-          <Title level={4} style={{ marginBottom: 16 }}>
-            诊断历史
-          </Title>
           <Space direction="vertical" style={{ width: '100%' }} size="small">
             {history.map((h, i) => (
-              <Card
+              <div
                 key={i}
-                size="small"
-                style={{ borderRadius: 8, cursor: 'pointer' }}
-                hoverable
                 onClick={() => viewDetail(h.id)}
+                style={{
+                  padding: '14px 18px',
+                  background: 'var(--bg-elevated)',
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  border: '1px solid transparent',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--border-hover)'
+                  e.currentTarget.style.background = 'var(--bg-hover)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'transparent'
+                  e.currentTarget.style.background = 'var(--bg-elevated)'
+                }}
               >
-                <Space direction="vertical" size={0}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      width: '100%',
-                    }}
-                  >
-                    <Text strong>
-                      {h.stockName} ({h.stockCode})
-                    </Text>
-                    {h.score && <Text code>{h.score}</Text>}
-                  </div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {h.createdAt ? new Date(h.createdAt).toLocaleString() : ''}
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <Text strong style={{ color: 'var(--text-primary)' }}>
+                    {h.stockName} ({h.stockCode})
                   </Text>
-                </Space>
-              </Card>
+                  {h.score && (
+                    <Tag
+                      style={{
+                        background: 'var(--accent-soft)',
+                        color: 'var(--accent)',
+                        border: 'none',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {h.score}
+                    </Tag>
+                  )}
+                </div>
+                <Text style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                  {h.createdAt ? new Date(h.createdAt).toLocaleString() : ''}
+                </Text>
+              </div>
             ))}
           </Space>
         </Card>
       )}
 
+      <Modal
+        title={`${detailData?.stockName} (${detailData?.stockCode}) - 诊断详情`}
+        open={detailOpen}
+        onCancel={() => setDetailOpen(false)}
+        footer={null}
+        width={720}
+        loading={detailLoading}
+      >
+        {detailData && (
+          <div>
+            <Text style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+              {detailData.createdAt ? new Date(detailData.createdAt).toLocaleString() : ''}
+            </Text>
+            {detailData.score && (
+              <Tag
+                style={{
+                  marginLeft: 12,
+                  background: 'var(--accent-soft)',
+                  color: 'var(--accent)',
+                  border: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                {detailData.score}
+              </Tag>
+            )}
+            <Divider style={{ borderColor: 'var(--border)' }} />
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              <SectionCard
+                title="基本面分析"
+                icon={StockOutlined}
+                content={detailData.fundamentalAnalysis}
+                color="#0ea5e9"
+              />
+              <SectionCard
+                title="技术面分析"
+                icon={AreaChartOutlined}
+                content={detailData.technicalAnalysis}
+                color="#a855f7"
+              />
+              <SectionCard
+                title="风险评估"
+                icon={SafetyOutlined}
+                content={detailData.riskAnalysis}
+                color="#f59e0b"
+              />
+              <SectionCard
+                title="最终建议"
+                icon={RobotOutlined}
+                content={detailData.finalReport}
+                color="#22c55e"
+              />
+            </Space>
+          </div>
+        )}
+      </Modal>
+
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={8}>
-          <Card
-            style={{ borderRadius: 12, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
-          >
-            <Space direction="vertical" align="center" style={{ width: '100%' }}>
-              <RocketOutlined style={{ fontSize: 28, color: '#667eea' }} />
-              <Text strong>快速分析</Text>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                秒级响应
+        {[
+          { icon: ThunderboltOutlined, title: '快速分析', desc: '秒级响应', color: '#0ea5e9' },
+          { icon: AreaChartOutlined, title: '多维分析', desc: '基本面+技术面', color: '#22c55e' },
+          { icon: BulbOutlined, title: '智能建议', desc: '买卖点参考', color: '#f59e0b' },
+        ].map((item, i) => (
+          <Col xs={24} sm={8} key={i}>
+            <Card bodyStyle={{ padding: '24px 20px', textAlign: 'center' }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: `${item.color}15`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 12px',
+                }}
+              >
+                <item.icon style={{ fontSize: 24, color: item.color }} />
+              </div>
+              <Text
+                strong
+                style={{
+                  color: 'var(--text-primary)',
+                  fontSize: 15,
+                  display: 'block',
+                  marginBottom: 4,
+                }}
+              >
+                {item.title}
               </Text>
-            </Space>
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card
-            style={{ borderRadius: 12, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
-          >
-            <Space direction="vertical" align="center" style={{ width: '100%' }}>
-              <StockOutlined style={{ fontSize: 28, color: '#52c41a' }} />
-              <Text strong>多维分析</Text>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                基本面+技术面
-              </Text>
-            </Space>
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card
-            style={{ borderRadius: 12, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
-          >
-            <Space direction="vertical" align="center" style={{ width: '100%' }}>
-              <BulbOutlined style={{ fontSize: 28, color: '#faad14' }} />
-              <Text strong>智能建议</Text>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                买卖点参考
-              </Text>
-            </Space>
-          </Card>
-        </Col>
+              <Text style={{ color: 'var(--text-muted)', fontSize: 12 }}>{item.desc}</Text>
+            </Card>
+          </Col>
+        ))}
       </Row>
     </div>
   )

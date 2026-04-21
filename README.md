@@ -10,6 +10,7 @@
 - AI 驱动的股票诊断与投资建议
 - 自选股管理
 - 持仓记账与盈亏分析
+- 策略回测与组合分析
 - 支持飞书接入（通过 OpenClaw）
 
 ## 快速开始
@@ -40,8 +41,9 @@ docker-compose down
 ```bash
 # 后端
 cd server
-pip install -r requirements.txt
-uvicorn src.main:app --reload --port 8000
+pip install uv
+uv pip install -r pyproject.toml
+PYTHONPATH=. uvicorn src.main:app --reload --port 8000
 
 # 前端
 cd client
@@ -75,18 +77,24 @@ pnpm run lint
 ```
 quant-ai/
 ├── docker-compose.yml    # 部署配置
+├── AGENTS.md             # Agent 开发指南
+├── README.md             # 项目说明
 ├── server/               # FastAPI 后端
 │   ├── src/
 │   │   ├── models/      # 数据库模型
 │   │   ├── services/    # 业务服务
+│   │   ├── api/         # API 路由
 │   │   └── main.py      # 入口
-│   ├── requirements.txt
-│   ├── ruff.toml
+│   ├── tests/           # 测试（含 E2E）
+│   ├── migrations/      # Alembic 迁移
+│   ├── pyproject.toml   # 依赖与工具配置
+│   ├── alembic.ini      # Alembic 配置
 │   └── Dockerfile
 ├── client/              # React 前端
 │   ├── src/
 │   │   ├── pages/       # 页面组件
-│   │   └── components/   # 公共组件
+│   │   ├── components/  # 公共组件
+│   │   └── services/    # API 客户端
 │   ├── package.json
 │   └── Dockerfile
 └── openclaw-skills/     # OpenClaw Skill

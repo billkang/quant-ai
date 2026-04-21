@@ -96,33 +96,3 @@ docker-compose down
 | REDIS_URL | Redis连接地址 |
 | AI_API_KEY | DeepSeek API Key |
 | AI_MODEL | AI模型名称 |
-
-## 工作流
-
-### Change 管理
-
-1. **创建变更**
-   ```bash
-   openspec new change "<change-name>"
-   ```
-
-2. **创建 artifacts**
-   - proposal.md - 变更提案
-   - design.md - 技术设计
-   - specs/ - 详细规格
-   - tasks.md - 实现任务
-
-3. **实现**
-   ```bash
-   /opsx-apply <change-name>
-   ```
-
-4. **归档**
-   ```bash
-   /opsx-archive <change-name>
-   ```
-
-### Archived Changes
-
-- `2026-04-21-ai-diagnosis-framework` - AI诊断框架升级
-- `2026-04-21-save-diagnostic-details` - 保存诊断详情

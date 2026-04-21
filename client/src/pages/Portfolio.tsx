@@ -15,16 +15,14 @@ import {
   Empty,
   Row,
   Col,
-  Statistic,
 } from 'antd'
 import {
   PlusOutlined,
   DeleteOutlined,
   FundOutlined,
   DollarOutlined,
-  RiseOutlined,
-  FallOutlined,
   BarChartOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import { quantApi } from '../services/api'
@@ -55,22 +53,13 @@ export default function Portfolio() {
     totalValue: number
     totalCost: number
     totalProfit: number
-  }>({
-    positions: [],
-    totalValue: 0,
-    totalCost: 0,
-    totalProfit: 0,
-  })
+  }>({ positions: [], totalValue: 0, totalCost: 0, totalProfit: 0 })
   const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [loading, setLoading] = useState(true)
   const [form] = Form.useForm()
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; code: string; name: string }>(
-    {
-      show: false,
-      code: '',
-      name: '',
-    }
+    { show: false, code: '', name: '' }
   )
 
   useEffect(() => {
@@ -93,9 +82,7 @@ export default function Portfolio() {
   const fetchAnalysis = async () => {
     try {
       const res = await quantApi.getPortfolioAnalysis()
-      if (res.data?.code === 0) {
-        setAnalysis(res.data.data)
-      }
+      if (res.data?.code === 0) setAnalysis(res.data.data)
     } catch (error) {
       console.error('Failed to fetch analysis:', error)
     }
@@ -118,10 +105,6 @@ export default function Portfolio() {
     }
   }
 
-  const handleDeleteClick = (code: string, name: string) => {
-    setDeleteConfirm({ show: true, code, name })
-  }
-
   const confirmDelete = async () => {
     try {
       await axios.delete(`/api/portfolio/${deleteConfirm.code}`)
@@ -134,19 +117,70 @@ export default function Portfolio() {
 
   const totalProfitPercent = data.totalCost > 0 ? (data.totalProfit / data.totalCost) * 100 : 0
 
+  const StatCard = ({
+    label,
+    value,
+    suffix,
+    icon: Icon,
+    color,
+  }: {
+    label: string
+    value: string | number
+    suffix?: string
+    icon: React.ElementType
+    color: string
+  }) => (
+    <Card className="metric-card" bodyStyle={{ padding: '20px 24px' }}>
+      <Space align="start" size={14}>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            background: `${color}18`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Icon style={{ fontSize: 20, color }} />
+        </div>
+        <div>
+          <div
+            style={{
+              fontSize: 11,
+              color: 'var(--text-secondary)',
+              fontWeight: 500,
+              marginBottom: 4,
+              textTransform: 'uppercase',
+            }}
+          >
+            {label}
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)' }}>
+            {value}
+            {suffix && (
+              <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 4 }}>
+                {suffix}
+              </span>
+            )}
+          </div>
+        </div>
+      </Space>
+    </Card>
+  )
+
   const columns = [
     {
       title: '股票',
       key: 'name',
-      width: '20%',
+      width: '22%',
       render: (_: unknown, record: Position) => (
         <Space direction="vertical" size={0}>
-          <Text strong style={{ fontSize: 15 }}>
+          <Text strong style={{ fontSize: 15, color: 'var(--text-primary)' }}>
             {record.name}
           </Text>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {record.code}
-          </Text>
+          <Text style={{ fontSize: 12, color: 'var(--text-muted)' }}>{record.code}</Text>
         </Space>
       ),
     },
@@ -155,31 +189,33 @@ export default function Portfolio() {
       dataIndex: 'quantity',
       key: 'quantity',
       align: 'right' as const,
-      width: '12%',
-      render: (qty: number) => <Text>{qty} 股</Text>,
+      render: (qty: number) => <Text style={{ color: 'var(--text-primary)' }}>{qty} 股</Text>,
     },
     {
       title: '成本价',
       dataIndex: 'costPrice',
       key: 'costPrice',
       align: 'right' as const,
-      render: (price: number) => `¥${price?.toFixed(2) || '-'}`,
+      render: (price: number) => (
+        <Text style={{ color: 'var(--text-primary)' }}>¥{price?.toFixed(2) || '-'}</Text>
+      ),
     },
     {
       title: '现价',
       dataIndex: 'currentPrice',
       key: 'currentPrice',
       align: 'right' as const,
-      render: (price: number) => `¥${price?.toFixed(2) || '-'}`,
+      render: (price: number) => (
+        <Text style={{ color: 'var(--text-primary)' }}>¥{price?.toFixed(2) || '-'}</Text>
+      ),
     },
     {
       title: '盈亏',
       dataIndex: 'profit',
       key: 'profit',
       align: 'right' as const,
-      width: '15%',
       render: (profit: number) => (
-        <Text type={profit >= 0 ? 'danger' : 'success'}>
+        <Text style={{ color: (profit || 0) >= 0 ? 'var(--up)' : 'var(--down)', fontWeight: 600 }}>
           {profit >= 0 ? '+' : ''}¥{profit?.toFixed(2) || '-'}
         </Text>
       ),
@@ -189,95 +225,76 @@ export default function Portfolio() {
       dataIndex: 'profitPercent',
       key: 'profitPercent',
       align: 'right' as const,
-      width: '12%',
       render: (pct: number) => (
-        <Tag color={pct >= 0 ? 'red' : 'green'}>
+        <Tag
+          style={{
+            background: (pct || 0) >= 0 ? 'var(--up-soft)' : 'var(--down-soft)',
+            color: (pct || 0) >= 0 ? 'var(--up)' : 'var(--down)',
+            border: 'none',
+            fontWeight: 600,
+          }}
+        >
           {pct >= 0 ? '+' : ''}
-          {pct?.toFixed(2) || '-'}%
+          {pct?.toFixed(2)}%
         </Tag>
       ),
     },
     {
-      title: '操作',
+      title: '',
       key: 'action',
       align: 'center' as const,
-      width: '10%',
+      width: '8%',
       render: (_: unknown, record: Position) => (
         <Button
           type="text"
           danger
           icon={<DeleteOutlined />}
-          onClick={() => handleDeleteClick(record.code, record.name)}
+          size="small"
+          style={{ opacity: 0.5, transition: 'opacity 0.2s' }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}
+          onClick={() => setDeleteConfirm({ show: true, code: record.code, name: record.name })}
         />
       ),
     },
   ]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <Title level={3} style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>
+          持仓管理
+        </Title>
+        <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>跟踪持仓表现与组合风险分析</Text>
+      </div>
+
       <Row gutter={[20, 20]}>
         <Col xs={24} sm={8}>
-          <Card
-            style={{
-              borderRadius: 16,
-              border: 'none',
-              background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-              boxShadow: '0 8px 32px rgba(17, 153, 142, 0.3)',
-            }}
-          >
-            <Statistic
-              title={<span style={{ color: 'rgba(255,255,255,0.8)' }}>持仓市值</span>}
-              value={data.totalValue}
-              precision={2}
-              prefix={<DollarOutlined style={{ color: '#fff' }} />}
-              valueStyle={{ color: '#fff', fontSize: 36, fontWeight: 700 }}
-            />
-          </Card>
+          <StatCard
+            label="持仓市值"
+            value={data.totalValue.toFixed(2)}
+            suffix="¥"
+            icon={DollarOutlined}
+            color="#0ea5e9"
+          />
         </Col>
         <Col xs={24} sm={8}>
-          <Card
-            style={{
-              borderRadius: 16,
-              border: 'none',
-              background:
-                data.totalProfit >= 0
-                  ? 'linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%)'
-                  : 'linear-gradient(135deg, #52c41a 0%, #73d13d 100%)',
-              boxShadow: `0 8px 32px rgba(${data.totalProfit >= 0 ? '255,107,107' : '82,196,26'}, 0.3)`,
-            }}
-          >
-            <Statistic
-              title={<span style={{ color: 'rgba(255,255,255,0.8)' }}>持仓盈亏</span>}
-              value={data.totalProfit}
-              precision={2}
-              prefix={
-                data.totalProfit >= 0 ? (
-                  <RiseOutlined style={{ color: '#fff' }} />
-                ) : (
-                  <FallOutlined style={{ color: '#fff' }} />
-                )
-              }
-              valueStyle={{ color: '#fff', fontSize: 36, fontWeight: 700 }}
-            />
-          </Card>
+          <StatCard
+            label="持仓盈亏"
+            value={data.totalProfit.toFixed(2)}
+            suffix="¥"
+            icon={FundOutlined}
+            color={data.totalProfit >= 0 ? '#ef4444' : '#22c55e'}
+          />
         </Col>
         <Col xs={24} sm={8}>
-          <Card
-            style={{
-              borderRadius: 16,
-              border: 'none',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
-            }}
-          >
-            <Statistic
-              title={<span style={{ color: 'rgba(255,255,255,0.8)' }}>盈亏比例</span>}
-              value={totalProfitPercent}
-              precision={2}
-              suffix={<span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16 }}>%</span>}
-              valueStyle={{ color: '#fff', fontSize: 36, fontWeight: 700 }}
-            />
-          </Card>
+          <StatCard
+            label="盈亏比例"
+            value={totalProfitPercent.toFixed(2)}
+            suffix="%"
+            icon={BarChartOutlined}
+            color={data.totalProfit >= 0 ? '#ef4444' : '#22c55e'}
+          />
         </Col>
       </Row>
 
@@ -285,50 +302,120 @@ export default function Portfolio() {
         <Card
           title={
             <Space>
-              <BarChartOutlined /> 组合风险分析
+              <WarningOutlined style={{ color: 'var(--accent)' }} />
+              <span style={{ fontWeight: 600 }}>组合风险分析</span>
             </Space>
           }
-          style={{ borderRadius: 16 }}
         >
           <Row gutter={[16, 16]}>
             <Col span={8}>
-              <Card size="small">
-                <Statistic title="夏普比率" value={analysis.sharpeRatio} precision={2} />
-              </Card>
+              <div
+                style={{
+                  padding: '16px 12px',
+                  background: 'var(--bg-elevated)',
+                  borderRadius: 'var(--radius-sm)',
+                  textAlign: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--text-muted)',
+                    marginBottom: 8,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  夏普比率
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {analysis.sharpeRatio?.toFixed(2) ?? '-'}
+                </div>
+              </div>
             </Col>
             <Col span={8}>
-              <Card size="small">
-                <Statistic
-                  title="最大回撤"
-                  value={analysis.maxDrawdown}
-                  precision={2}
-                  suffix="%"
-                  valueStyle={{ color: '#52c41a' }}
-                />
-              </Card>
+              <div
+                style={{
+                  padding: '16px 12px',
+                  background: 'var(--bg-elevated)',
+                  borderRadius: 'var(--radius-sm)',
+                  textAlign: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--text-muted)',
+                    marginBottom: 8,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  最大回撤
+                </div>
+                <div
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 700,
+                    color: analysis.maxDrawdown < -10 ? 'var(--down)' : 'var(--text-primary)',
+                  }}
+                >
+                  {analysis.maxDrawdown?.toFixed(2) ?? '-'}%
+                </div>
+              </div>
             </Col>
             <Col span={8}>
-              <Card size="small">
-                <Statistic title="波动率" value={analysis.volatility} precision={2} suffix="%" />
-              </Card>
+              <div
+                style={{
+                  padding: '16px 12px',
+                  background: 'var(--bg-elevated)',
+                  borderRadius: 'var(--radius-sm)',
+                  textAlign: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--text-muted)',
+                    marginBottom: 8,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  波动率
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {analysis.volatility?.toFixed(2) ?? '-'}%
+                </div>
+              </div>
             </Col>
           </Row>
           {Object.keys(analysis.correlationMatrix).length > 1 && (
-            <div style={{ marginTop: 16 }}>
-              <Text strong>相关性矩阵</Text>
+            <div style={{ marginTop: 20 }}>
+              <Text strong style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                相关性矩阵
+              </Text>
               <ReactECharts
                 option={{
+                  backgroundColor: 'transparent',
                   tooltip: { position: 'top' },
                   grid: { height: '50%', top: '10%' },
                   xAxis: {
                     type: 'category',
                     data: Object.keys(analysis.correlationMatrix),
-                    splitArea: { show: true },
+                    splitArea: {
+                      show: true,
+                      areaStyle: { color: ['rgba(148,163,184,0.03)', 'transparent'] },
+                    },
+                    axisLine: { lineStyle: { color: '#334155' } },
+                    axisLabel: { color: '#94a3b8' },
                   },
                   yAxis: {
                     type: 'category',
                     data: Object.keys(analysis.correlationMatrix),
-                    splitArea: { show: true },
+                    splitArea: {
+                      show: true,
+                      areaStyle: { color: ['rgba(148,163,184,0.03)', 'transparent'] },
+                    },
+                    axisLine: { lineStyle: { color: '#334155' } },
+                    axisLabel: { color: '#94a3b8' },
                   },
                   visualMap: {
                     min: -1,
@@ -336,8 +423,9 @@ export default function Portfolio() {
                     calculable: true,
                     orient: 'horizontal',
                     left: 'center',
-                    bottom: '15%',
-                    inRange: { color: ['#52c41a', '#fff', '#ff4d4f'] },
+                    bottom: '10%',
+                    inRange: { color: ['#22c55e', '#0f172a', '#ef4444'] },
+                    textStyle: { color: '#94a3b8' },
                   },
                   series: [
                     {
@@ -350,32 +438,37 @@ export default function Portfolio() {
                         show: true,
                         formatter: (p: { value: [string, string, number] }) =>
                           p.value[2].toFixed(2),
+                        color: '#e2e8f0',
                       },
                     },
                   ],
                 }}
-                style={{ height: 350 }}
+                style={{ height: 360 }}
               />
             </div>
           )}
           {Object.keys(analysis.industryDistribution).length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <Text strong>行业分布</Text>
+            <div style={{ marginTop: 20 }}>
+              <Text strong style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                行业分布
+              </Text>
               <ReactECharts
                 option={{
-                  tooltip: { trigger: 'item' },
+                  backgroundColor: 'transparent',
+                  tooltip: {
+                    trigger: 'item',
+                    backgroundColor: '#1e293b',
+                    borderColor: '#334155',
+                    textStyle: { color: '#e2e8f0' },
+                  },
                   series: [
                     {
                       name: '行业分布',
                       type: 'pie',
                       radius: ['40%', '70%'],
                       avoidLabelOverlap: false,
-                      itemStyle: {
-                        borderRadius: 10,
-                        borderColor: '#fff',
-                        borderWidth: 2,
-                      },
-                      label: { show: true, formatter: '{b}: {d}%' },
+                      itemStyle: { borderRadius: 8, borderColor: '#0f172a', borderWidth: 3 },
+                      label: { show: true, formatter: '{b}: {d}%', color: '#94a3b8' },
                       data: Object.entries(analysis.industryDistribution).map(([name, value]) => ({
                         name,
                         value,
@@ -390,61 +483,33 @@ export default function Portfolio() {
         </Card>
       )}
 
-      <Card style={{ borderRadius: 16, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0 8px',
-            }}
-          >
-            <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <FundOutlined style={{ fontSize: 20, color: '#fff' }} />
-              </div>
-              持仓明细
-            </Title>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setShowAdd(true)}
-              style={{
-                borderRadius: 8,
-                background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-                border: 'none',
-              }}
-            >
-              记录交易
-            </Button>
+      <Card
+        title={
+          <Space>
+            <FundOutlined style={{ color: 'var(--accent)' }} />
+            <span style={{ fontWeight: 600 }}>持仓明细</span>
+          </Space>
+        }
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowAdd(true)}>
+            记录交易
+          </Button>
+        }
+        bodyStyle={{ padding: 0 }}
+      >
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 60 }}>
+            <Text style={{ color: 'var(--text-muted)' }}>加载中...</Text>
           </div>
-
-          <div style={{ padding: 24, background: '#fafafa', borderRadius: 12 }}>
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: 40 }}>加载中...</div>
-            ) : data.positions.length === 0 ? (
-              <Empty description="暂无持仓记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            ) : (
-              <Table
-                columns={columns}
-                dataSource={data.positions}
-                rowKey="code"
-                pagination={false}
-              />
-            )}
-          </div>
-        </Space>
+        ) : data.positions.length === 0 ? (
+          <Empty
+            description="暂无持仓记录"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            style={{ padding: 60 }}
+          />
+        ) : (
+          <Table columns={columns} dataSource={data.positions} rowKey="code" pagination={false} />
+        )}
       </Card>
 
       <Modal
@@ -453,9 +518,8 @@ export default function Portfolio() {
         onOk={handleSubmit}
         onCancel={() => setShowAdd(false)}
         okText="保存"
-        centered
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
+        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="stock_code" label="股票代码" rules={[{ required: true }]}>
             <Input placeholder="如：600519" />
           </Form.Item>
@@ -486,9 +550,8 @@ export default function Portfolio() {
         onCancel={() => setDeleteConfirm({ show: false, code: '', name: '' })}
         okText="确定删除"
         okButtonProps={{ danger: true }}
-        centered
       >
-        <p style={{ fontSize: 16 }}>
+        <p style={{ fontSize: 15, color: 'var(--text-primary)' }}>
           确定要删除持仓 <Text strong>{deleteConfirm.name}</Text> ({deleteConfirm.code}) 吗？
         </p>
       </Modal>

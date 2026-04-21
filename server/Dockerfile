@@ -5,11 +5,11 @@ WORKDIR /app
 # Install uv
 RUN pip install uv
 
-# Copy requirements
-COPY requirements.txt .
+# Copy dependency manifest
+COPY pyproject.toml .
 
-# Install dependencies with uv
-RUN uv pip install --system -r requirements.txt
+# Install dependencies with uv (read from pyproject.toml)
+RUN uv pip install --system -r pyproject.toml
 
 # Copy source code and migrations
 COPY src/ ./src/

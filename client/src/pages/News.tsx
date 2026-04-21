@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
-import { Card, Row, Col, Select, Button, Space, message, Typography, Empty, Tabs, Spin } from 'antd'
+import { Card, Select, Button, Space, message, Typography, Empty, Tabs, Spin, Tag } from 'antd'
 import {
   FileTextOutlined,
   DatabaseOutlined,
   GlobalOutlined,
   ReloadOutlined,
   StockOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons'
 
-const { Title, Text } = Typography
+const { Text, Title } = Typography
 
 interface NewsItem {
   id: string
@@ -35,7 +36,7 @@ const MARKET_SOURCES: Array<{
   interval_minutes: number
 }> = [
   {
-    name: '大盘行情',
+    name: '上证指数',
     source_type: 'stock_news',
     config: { symbol: '000001' },
     interval_minutes: 30,
@@ -50,14 +51,15 @@ const MARKET_SOURCES: Array<{
 ]
 
 export default function News() {
-  const [sources, setSources] = useState<NewsSource[]>([])
+  const [, setSources] = useState<NewsSource[]>([])
   const [selectedStock, setSelectedStock] = useState<string>('')
   const [stocks, setStocks] = useState<Array<{ code: string; name: string }>>([])
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
   const [newsLoading, setNewsLoading] = useState(false)
   const [news, setNews] = useState<NewsItem[]>([])
   const [tabKey, setTabKey] = useState('news')
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchSources()
     fetchWatchlist()
@@ -79,9 +81,7 @@ export default function News() {
       const res = await fetch('/api/news/sources')
       const data = await res.json()
       setSources(data)
-      if (data.length === 0) {
-        await initDefaultSources()
-      }
+      if (data.length === 0) await initDefaultSources()
     } catch (error) {
       console.error('Failed to fetch sources:', error)
     } finally {
@@ -92,9 +92,7 @@ export default function News() {
   const initDefaultSources = async () => {
     const watchlistRes = await fetch('/api/stocks/watchlist')
     const watchlist = await watchlistRes.json()
-
     const existingSymbols = new Set()
-
     for (const src of MARKET_SOURCES) {
       try {
         await fetch('/api/news/sources', {
@@ -104,10 +102,9 @@ export default function News() {
         })
         existingSymbols.add(src.config.symbol)
       } catch (e) {
-        console.error('Failed to add market source:', e)
+        console.error(e)
       }
     }
-
     for (const stock of watchlist) {
       if (!existingSymbols.has(stock.code)) {
         try {
@@ -122,11 +119,10 @@ export default function News() {
             }),
           })
         } catch (e) {
-          console.error('Failed to add watchlist source:', e)
+          console.error(e)
         }
       }
     }
-
     await fetchSources()
   }
 
@@ -138,7 +134,7 @@ export default function News() {
       const data = await res.json()
       setNews(data)
     } catch (error) {
-      console.error('Failed to fetch news:', error)
+      console.error(error)
       message.error('获取资讯失败')
     } finally {
       setNewsLoading(false)
@@ -148,22 +144,7 @@ export default function News() {
   const handleStockChange = (code: string) => {
     setSelectedStock(code)
     setNews([])
-    if (code) {
-      fetchNews(code)
-    }
-  }
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'stock_news':
-        return <FileTextOutlined />
-      case 'stock_notices':
-        return <DatabaseOutlined />
-      case 'macro_news':
-        return <GlobalOutlined />
-      default:
-        return <FileTextOutlined />
-    }
+    if (code) fetchNews(code)
   }
 
   const tabItems = [
@@ -171,151 +152,164 @@ export default function News() {
       key: 'news',
       label: (
         <span>
-          <FileTextOutlined /> 股票新闻
+          <FileTextOutlined style={{ marginRight: 6 }} />
+          股票新闻
         </span>
       ),
       children: (
-        <Card bordered={false} style={{ background: '#fafafa', borderRadius: 12 }}>
+        <div>
           {newsLoading ? (
-            <div style={{ textAlign: 'center', padding: 40 }}>
+            <div style={{ textAlign: 'center', padding: 60 }}>
               <Spin />
             </div>
           ) : news.length === 0 ? (
-            <Empty description="暂无新闻，请先选择股票或添加自选股" />
+            <Empty
+              description="暂无新闻，请先选择股票"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              style={{ padding: 60 }}
+            />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Space direction="vertical" style={{ width: '100%' }} size="small">
               {news.map((item, idx) => (
-                <Card key={idx} size="small" style={{ borderRadius: 8 }}>
-                  <Space direction="vertical" size={4} style={{ width: '100%' }}>
-                    <Text strong style={{ fontSize: 15 }}>
-                      {item.title}
+                <div
+                  key={idx}
+                  style={{
+                    padding: '16px 20px',
+                    background: 'var(--bg-elevated)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid transparent',
+                    transition: 'all 0.2s',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = 'var(--border-hover)'
+                    e.currentTarget.style.background = 'var(--bg-hover)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'transparent'
+                    e.currentTarget.style.background = 'var(--bg-elevated)'
+                  }}
+                >
+                  <Text
+                    strong
+                    style={{
+                      fontSize: 15,
+                      color: 'var(--text-primary)',
+                      display: 'block',
+                      marginBottom: 6,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {item.title}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: 'var(--text-secondary)',
+                      display: 'block',
+                      marginBottom: 8,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {item.summary}
+                  </Text>
+                  <Space size={12}>
+                    <Tag
+                      style={{
+                        background: 'var(--accent-soft)',
+                        color: 'var(--accent)',
+                        border: 'none',
+                        fontSize: 11,
+                      }}
+                    >
+                      {item.source}
+                    </Tag>
+                    <Text style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      <ClockCircleOutlined style={{ marginRight: 4 }} />
+                      {item.time}
                     </Text>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {item.summary}
-                    </Text>
-                    <Space>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {item.source}
-                      </Text>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        |
-                      </Text>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {item.time}
-                      </Text>
-                    </Space>
                   </Space>
-                </Card>
+                </div>
               ))}
-            </div>
+            </Space>
           )}
-        </Card>
+        </div>
       ),
     },
     {
       key: 'notices',
       label: (
         <span>
-          <DatabaseOutlined /> 股票公告
+          <DatabaseOutlined style={{ marginRight: 6 }} />
+          股票公告
         </span>
       ),
       children: (
-        <Card bordered={false} style={{ background: '#fafafa', borderRadius: 12 }}>
-          <Empty description="请选择股票查看公告" />
-        </Card>
+        <Empty
+          description="请选择股票查看公告"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          style={{ padding: 60 }}
+        />
       ),
     },
     {
       key: 'macro',
       label: (
         <span>
-          <GlobalOutlined /> 宏观资讯
+          <GlobalOutlined style={{ marginRight: 6 }} />
+          宏观资讯
         </span>
       ),
       children: (
-        <Card bordered={false} style={{ background: '#fafafa', borderRadius: 12 }}>
-          <Empty description="宏观资讯功能开发中" />
-        </Card>
+        <Empty
+          description="宏观资讯功能开发中"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          style={{ padding: 60 }}
+        />
       ),
     },
   ]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <Card
-        style={{
-          borderRadius: 16,
-          border: 'none',
-          background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-          boxShadow: '0 8px 32px rgba(17, 153, 142, 0.3)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 14,
-              background: 'rgba(255,255,255,0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <FileTextOutlined style={{ fontSize: 28, color: '#fff' }} />
-          </div>
-          <div>
-            <Title level={3} style={{ margin: 0, color: '#fff' }}>
-              资讯中心
-            </Title>
-            <Text style={{ color: 'rgba(255,255,255,0.8)' }}>聚合股票新闻、公告、宏观资讯</Text>
-          </div>
-        </div>
-      </Card>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <Title level={3} style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>
+          资讯中心
+        </Title>
+        <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+          聚合股票新闻、公告与宏观资讯
+        </Text>
+      </div>
 
-      <Card style={{ borderRadius: 16, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-              padding: '16px 20px',
-              background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%)',
-              borderRadius: 12,
-            }}
+      <Card bodyStyle={{ padding: '16px 20px' }}>
+        <Space size={16} wrap>
+          <StockOutlined style={{ fontSize: 18, color: 'var(--accent)' }} />
+          <Text strong style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+            选择股票
+          </Text>
+          <Select
+            style={{ width: 280 }}
+            placeholder="选择自选股或输入股票代码"
+            showSearch
+            allowClear
+            value={selectedStock}
+            onChange={handleStockChange}
+            options={[
+              ...MARKET_SOURCES.map(s => ({ value: s.config.symbol, label: s.name })),
+              ...stocks.map(s => ({ value: s.code, label: `${s.name} (${s.code})` })),
+            ]}
+          />
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => selectedStock && fetchNews(selectedStock)}
+            disabled={!selectedStock}
           >
-            <StockOutlined style={{ fontSize: 18, color: '#11998e' }} />
-            <Text strong style={{ fontSize: 15 }}>
-              选择股票查看资讯
-            </Text>
-            <Select
-              style={{ width: 280 }}
-              placeholder="选择自选股或输入股票代码"
-              showSearch
-              allowClear
-              value={selectedStock}
-              onChange={handleStockChange}
-              options={[
-                ...MARKET_SOURCES.map(s => ({
-                  value: s.config.symbol,
-                  label: s.name,
-                })),
-                ...stocks.map(s => ({ value: s.code, label: `${s.name} (${s.code})` })),
-              ]}
-            />
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={() => selectedStock && fetchNews(selectedStock)}
-              disabled={!selectedStock}
-            >
-              刷新
-            </Button>
-          </div>
-
-          <Tabs activeKey={tabKey} onChange={setTabKey} items={tabItems} />
+            刷新
+          </Button>
         </Space>
       </Card>
+
+      <Tabs activeKey={tabKey} onChange={setTabKey} items={tabItems} />
     </div>
   )
 }

@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactECharts from 'echarts-for-react'
-import { Card, Row, Col, Statistic, Button, Space, Spin, Tag, Descriptions, Tabs } from 'antd'
-import { ArrowUpOutlined, ArrowDownOutlined, LeftOutlined } from '@ant-design/icons'
-import type { DescriptionsProps } from 'antd'
+import { Card, Row, Col, Button, Space, Spin, Tag, Tabs } from 'antd'
+import {
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  LeftOutlined,
+  StockOutlined,
+  AreaChartOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons'
 import { quantApi } from '../services/api'
 
 interface StockData {
@@ -79,11 +85,7 @@ export default function StockDetail() {
 
   useEffect(() => {
     if (!code) return
-    const periodMap: Record<string, string> = {
-      daily: '6mo',
-      weekly: '6mo',
-      monthly: '1y',
-    }
+    const periodMap: Record<string, string> = { daily: '6mo', weekly: '6mo', monthly: '1y' }
     fetch(`/api/stocks/${code}/kline?period=${periodMap[period] || '6mo'}`)
       .then(res => res.json())
       .then(data => setKlines(data))
@@ -92,65 +94,72 @@ export default function StockDetail() {
   useEffect(() => {
     if (!code) return
     quantApi.getIndicators(code).then(res => {
-      if (res.data?.code === 0) {
-        setIndicators(res.data.data)
-      }
+      if (res.data?.code === 0) setIndicators(res.data.data)
     })
     quantApi.getIndicatorHistory(code, 120).then(res => {
-      if (res.data?.code === 0) {
-        setIndicatorHistory(res.data.data || [])
-      }
+      if (res.data?.code === 0) setIndicatorHistory(res.data.data || [])
     })
     quantApi.getFundamentals(code).then(res => {
-      if (res.data?.code === 0) {
-        setFundamentals(res.data.data)
-      }
+      if (res.data?.code === 0) setFundamentals(res.data.data)
     })
   }, [code])
 
   const getChartOption = () => {
     if (klines.length === 0) return {}
-
     const dates = klines.map(k => k.date)
     const opens = klines.map(k => k.open)
     const closes = klines.map(k => k.close)
-
-    // Calculate MA5 and MA20 from klines
     const ma5 = klines.map((_, i) => {
       if (i < 4) return null
-      const sum = klines.slice(i - 4, i + 1).reduce((s, k) => s + k.close, 0)
-      return sum / 5
+      return klines.slice(i - 4, i + 1).reduce((s, k) => s + k.close, 0) / 5
     })
     const ma20 = klines.map((_, i) => {
       if (i < 19) return null
-      const sum = klines.slice(i - 19, i + 1).reduce((s, k) => s + k.close, 0)
-      return sum / 20
+      return klines.slice(i - 19, i + 1).reduce((s, k) => s + k.close, 0) / 20
     })
-
     return {
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'cross' },
-      },
-      legend: {
-        data: ['Kline', 'MA5', 'MA20'],
-      },
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+      legend: { data: ['K线', 'MA5', 'MA20'], textStyle: { color: '#94a3b8' } },
       grid: [
         { left: '10%', right: '8%', height: '50%' },
         { left: '10%', right: '8%', top: '68%', height: '16%' },
       ],
       xAxis: [
-        { type: 'category', data: dates, gridIndex: 0 },
-        { type: 'category', data: dates, gridIndex: 1 },
+        {
+          type: 'category',
+          data: dates,
+          gridIndex: 0,
+          axisLine: { lineStyle: { color: '#334155' } },
+          axisLabel: { color: '#64748b' },
+        },
+        {
+          type: 'category',
+          data: dates,
+          gridIndex: 1,
+          axisLine: { lineStyle: { color: '#334155' } },
+          axisLabel: { color: '#64748b' },
+        },
       ],
       yAxis: [
-        { scale: true, gridIndex: 0 },
-        { scale: true, gridIndex: 1, splitNumber: 2 },
+        {
+          scale: true,
+          gridIndex: 0,
+          splitLine: { lineStyle: { color: '#1e293b' } },
+          axisLabel: { color: '#64748b' },
+        },
+        {
+          scale: true,
+          gridIndex: 1,
+          splitNumber: 2,
+          splitLine: { lineStyle: { color: '#1e293b' } },
+          axisLabel: { color: '#64748b' },
+        },
       ],
       dataZoom: [{ type: 'inside', xAxisIndex: [0, 1], start: 60, end: 100 }],
       series: [
         {
-          name: 'Kline',
+          name: 'K线',
           type: 'candlestick',
           data: klines.map(k => [k.open, k.close, k.low, k.high]),
           itemStyle: {
@@ -165,7 +174,7 @@ export default function StockDetail() {
           type: 'line',
           data: ma5,
           smooth: true,
-          lineStyle: { opacity: 0.8, width: 1 },
+          lineStyle: { color: '#0ea5e9', width: 1.5 },
           symbol: 'none',
         },
         {
@@ -173,19 +182,17 @@ export default function StockDetail() {
           type: 'line',
           data: ma20,
           smooth: true,
-          lineStyle: { opacity: 0.8, width: 1 },
+          lineStyle: { color: '#a855f7', width: 1.5 },
           symbol: 'none',
         },
         {
-          name: 'Volume',
+          name: '成交量',
           type: 'bar',
           xAxisIndex: 1,
           yAxisIndex: 1,
           data: klines.map((k, i) => ({
             value: k.volume,
-            itemStyle: {
-              color: closes[i] >= opens[i] ? '#ef4444' : '#22c55e',
-            },
+            itemStyle: { color: closes[i] >= opens[i] ? '#ef4444' : '#22c55e' },
           })),
         },
       ],
@@ -196,13 +203,35 @@ export default function StockDetail() {
     if (!indicatorHistory.length) return {}
     const dates = indicatorHistory.map(i => i.tradeDate)
     return {
+      backgroundColor: 'transparent',
       tooltip: { trigger: 'axis' },
       grid: { left: '10%', right: '8%', height: '60%' },
-      xAxis: { type: 'category', data: dates },
-      yAxis: { type: 'value' },
+      xAxis: {
+        type: 'category',
+        data: dates,
+        axisLine: { lineStyle: { color: '#334155' } },
+        axisLabel: { color: '#64748b' },
+      },
+      yAxis: {
+        type: 'value',
+        splitLine: { lineStyle: { color: '#1e293b' } },
+        axisLabel: { color: '#64748b' },
+      },
       series: [
-        { name: 'DIF', type: 'line', data: indicatorHistory.map(i => i.macdDif), smooth: true },
-        { name: 'DEA', type: 'line', data: indicatorHistory.map(i => i.macdDea), smooth: true },
+        {
+          name: 'DIF',
+          type: 'line',
+          data: indicatorHistory.map(i => i.macdDif),
+          smooth: true,
+          lineStyle: { color: '#0ea5e9', width: 1.5 },
+        },
+        {
+          name: 'DEA',
+          type: 'line',
+          data: indicatorHistory.map(i => i.macdDea),
+          smooth: true,
+          lineStyle: { color: '#f59e0b', width: 1.5 },
+        },
         {
           name: 'BAR',
           type: 'bar',
@@ -219,185 +248,351 @@ export default function StockDetail() {
     if (!indicatorHistory.length) return {}
     const dates = indicatorHistory.map(i => i.tradeDate)
     return {
+      backgroundColor: 'transparent',
       tooltip: { trigger: 'axis' },
       grid: { left: '10%', right: '8%', height: '60%' },
-      xAxis: { type: 'category', data: dates },
-      yAxis: { type: 'value', min: 0, max: 100 },
+      xAxis: {
+        type: 'category',
+        data: dates,
+        axisLine: { lineStyle: { color: '#334155' } },
+        axisLabel: { color: '#64748b' },
+      },
+      yAxis: {
+        type: 'value',
+        min: 0,
+        max: 100,
+        splitLine: { lineStyle: { color: '#1e293b' } },
+        axisLabel: { color: '#64748b' },
+      },
       series: [
-        { name: 'RSI6', type: 'line', data: indicatorHistory.map(i => i.rsi6), smooth: true },
-        { name: 'RSI12', type: 'line', data: indicatorHistory.map(i => i.rsi12), smooth: true },
-        { name: 'RSI24', type: 'line', data: indicatorHistory.map(i => i.rsi24), smooth: true },
+        {
+          name: 'RSI6',
+          type: 'line',
+          data: indicatorHistory.map(i => i.rsi6),
+          smooth: true,
+          lineStyle: { color: '#ef4444', width: 1.5 },
+        },
+        {
+          name: 'RSI12',
+          type: 'line',
+          data: indicatorHistory.map(i => i.rsi12),
+          smooth: true,
+          lineStyle: { color: '#0ea5e9', width: 1.5 },
+        },
+        {
+          name: 'RSI24',
+          type: 'line',
+          data: indicatorHistory.map(i => i.rsi24),
+          smooth: true,
+          lineStyle: { color: '#a855f7', width: 1.5 },
+        },
       ],
     }
   }
 
   const priceChange = stock?.changePercent ?? 0
   const isUp = priceChange >= 0
+  const changeColor = isUp ? 'var(--up)' : 'var(--down)'
 
-  const items: DescriptionsProps['items'] = [
-    { key: '1', label: 'Open', children: stock?.open?.toFixed(2) || '-' },
-    { key: '2', label: 'High', children: stock?.high?.toFixed(2) || '-' },
-    { key: '3', label: 'Low', children: stock?.low?.toFixed(2) || '-' },
-    {
-      key: '4',
-      label: 'Volume',
-      children: stock ? `${(stock.volume / 100000000).toFixed(2)}亿` : '-',
-    },
-  ]
-
-  const indicatorCards = [
-    { title: 'MA5', value: indicators?.ma5, color: '#1677ff' },
-    { title: 'MA20', value: indicators?.ma20, color: '#52c41a' },
-    { title: 'MA60', value: indicators?.ma60, color: '#faad14' },
-    {
-      title: 'RSI6',
-      value: indicators?.rsi6,
-      color:
-        indicators && indicators.rsi6 > 70
-          ? '#ff4d4f'
-          : indicators && indicators.rsi6 < 30
-            ? '#52c41a'
-            : '#8c8c8c',
-    },
-    { title: 'MACD DIF', value: indicators?.macdDif, color: '#722ed1' },
-    {
-      title: 'MACD BAR',
-      value: indicators?.macdBar,
-      color: indicators && indicators.macdBar >= 0 ? '#ff4d4f' : '#52c41a',
-    },
-    { title: 'KDJ K', value: indicators?.kdjK, color: '#eb2f96' },
-    { title: 'BOLL 上轨', value: indicators?.bollUpper, color: '#13c2c2' },
-  ]
+  const IndicatorBadge = ({
+    label,
+    value,
+    color,
+  }: {
+    label: string
+    value?: number
+    color: string
+  }) => (
+    <div style={{ textAlign: 'center', padding: '14px 8px' }}>
+      <div
+        style={{
+          fontSize: 11,
+          color: 'var(--text-muted)',
+          marginBottom: 6,
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: 20,
+          fontWeight: 700,
+          color: value !== undefined ? color : 'var(--text-muted)',
+        }}
+      >
+        {value !== undefined ? value.toFixed(2) : '-'}
+      </div>
+    </div>
+  )
 
   return (
     <Spin spinning={loading}>
-      <Card>
-        <Space style={{ marginBottom: 16 }}>
-          <Button icon={<LeftOutlined />} onClick={() => navigate('/')}>
-            返回首页
-          </Button>
-        </Space>
-        <Row gutter={16}>
-          <Col span={12}>
-            <Statistic
-              title={stock?.name}
-              value={stock?.price}
-              precision={2}
-              prefix={isUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-              suffix=""
-              valueStyle={{ color: isUp ? '#ff4d4f' : '#52c41a' }}
-            />
-            <Tag color={isUp ? 'red' : 'green'} style={{ fontSize: 16, marginTop: 8 }}>
-              {priceChange >= 0 ? '+' : ''}
-              {priceChange.toFixed(2)}%
-            </Tag>
-          </Col>
-          <Col span={12}>
-            <Descriptions items={items} column={2} size="small" />
-          </Col>
-        </Row>
-      </Card>
-
-      <Card style={{ marginTop: 16 }} title="技术指标">
-        <Row gutter={[16, 16]}>
-          {indicatorCards.map(card => (
-            <Col span={6} key={card.title}>
-              <Card size="small" style={{ borderLeft: `4px solid ${card.color}` }}>
-                <Statistic
-                  title={card.title}
-                  value={card.value ?? '-'}
-                  precision={2}
-                  valueStyle={{ color: card.color, fontSize: 20 }}
-                />
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      </Card>
-
-      <Card style={{ marginTop: 16 }}>
-        <Space style={{ marginBottom: 16 }}>
-          <span style={{ fontWeight: 500 }}>K线图</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 4 }}>
           <Button
-            type={period === 'daily' ? 'primary' : 'default'}
-            onClick={() => setPeriod('daily')}
+            icon={<LeftOutlined />}
+            onClick={() => navigate('/')}
+            style={{ borderRadius: 'var(--radius-sm)' }}
           >
-            日线
+            返回
           </Button>
-          <Button
-            type={period === 'weekly' ? 'primary' : 'default'}
-            onClick={() => setPeriod('weekly')}
-          >
-            周线
-          </Button>
-          <Button
-            type={period === 'monthly' ? 'primary' : 'default'}
-            onClick={() => setPeriod('monthly')}
-          >
-            月线
-          </Button>
-        </Space>
-        <ReactECharts option={getChartOption()} style={{ height: 500 }} />
-      </Card>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>
+              {stock?.name}{' '}
+              <span style={{ color: 'var(--text-muted)', fontSize: 14, fontWeight: 400 }}>
+                {stock?.code}
+              </span>
+            </div>
+          </div>
+        </div>
 
-      {indicatorHistory.length > 0 && (
-        <Card style={{ marginTop: 16 }} title="指标趋势">
-          <Tabs
-            items={[
-              {
-                key: 'macd',
-                label: 'MACD',
-                children: <ReactECharts option={getMacdChartOption()} style={{ height: 300 }} />,
-              },
-              {
-                key: 'rsi',
-                label: 'RSI',
-                children: <ReactECharts option={getRsiChartOption()} style={{ height: 300 }} />,
-              },
-            ]}
-          />
-        </Card>
-      )}
-
-      {fundamentals && (
-        <Card style={{ marginTop: 16 }} title="基本面数据">
-          <Row gutter={[16, 16]}>
-            <Col span={6}>
-              <Statistic title="PE(TTM)" value={fundamentals.peTtm ?? '-'} precision={2} />
+        {/* Price hero */}
+        <Card className="metric-card" bodyStyle={{ padding: '24px 28px' }}>
+          <Row gutter={[40, 16]} align="middle">
+            <Col>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 16 }}>
+                <span style={{ fontSize: 40, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  ¥{stock?.price?.toFixed(2) || '-'}
+                </span>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 600,
+                      color: changeColor,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    {isUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                    {stock?.change ? `${isUp ? '+' : ''}${stock.change.toFixed(2)}` : '-'}
+                  </span>
+                  <Tag
+                    style={{
+                      background: isUp ? 'var(--up-soft)' : 'var(--down-soft)',
+                      color: changeColor,
+                      border: 'none',
+                      fontWeight: 600,
+                      marginTop: 4,
+                    }}
+                  >
+                    {priceChange >= 0 ? '+' : ''}
+                    {priceChange.toFixed(2)}%
+                  </Tag>
+                </div>
+              </div>
             </Col>
-            <Col span={6}>
-              <Statistic title="PB" value={fundamentals.pb ?? '-'} precision={2} />
-            </Col>
-            <Col span={6}>
-              <Statistic title="ROE" value={fundamentals.roe ?? '-'} precision={2} suffix="%" />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="毛利率"
-                value={fundamentals.grossMargin ?? '-'}
-                precision={2}
-                suffix="%"
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="营收增速"
-                value={fundamentals.revenueGrowth ?? '-'}
-                precision={2}
-                suffix="%"
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="负债率"
-                value={fundamentals.debtRatio ?? '-'}
-                precision={2}
-                suffix="%"
-              />
+            <Col flex="auto">
+              <Row gutter={[32, 8]}>
+                <Col>
+                  <div
+                    style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}
+                  >
+                    今开
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {stock?.open?.toFixed(2) || '-'}
+                  </div>
+                </Col>
+                <Col>
+                  <div
+                    style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}
+                  >
+                    最高
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {stock?.high?.toFixed(2) || '-'}
+                  </div>
+                </Col>
+                <Col>
+                  <div
+                    style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}
+                  >
+                    最低
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {stock?.low?.toFixed(2) || '-'}
+                  </div>
+                </Col>
+                <Col>
+                  <div
+                    style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}
+                  >
+                    成交量
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {stock ? `${(stock.volume / 100000000).toFixed(2)}亿` : '-'}
+                  </div>
+                </Col>
+              </Row>
             </Col>
           </Row>
         </Card>
-      )}
+
+        {/* Indicators */}
+        {indicators && (
+          <Card
+            title={
+              <Space>
+                <AreaChartOutlined style={{ color: 'var(--accent)' }} />
+                <span style={{ fontWeight: 600 }}>技术指标</span>
+              </Space>
+            }
+            bodyStyle={{ padding: 0 }}
+          >
+            <Row>
+              <Col span={3}>
+                <IndicatorBadge label="MA5" value={indicators.ma5} color="#0ea5e9" />
+              </Col>
+              <Col span={3}>
+                <IndicatorBadge label="MA20" value={indicators.ma20} color="#a855f7" />
+              </Col>
+              <Col span={3}>
+                <IndicatorBadge label="MA60" value={indicators.ma60} color="#f59e0b" />
+              </Col>
+              <Col span={3}>
+                <IndicatorBadge
+                  label="RSI6"
+                  value={indicators.rsi6}
+                  color={
+                    indicators.rsi6 && indicators.rsi6 > 70
+                      ? 'var(--up)'
+                      : indicators.rsi6 && indicators.rsi6 < 30
+                        ? 'var(--down)'
+                        : 'var(--text-primary)'
+                  }
+                />
+              </Col>
+              <Col span={3}>
+                <IndicatorBadge label="MACD" value={indicators.macdDif} color="#22d3ee" />
+              </Col>
+              <Col span={3}>
+                <IndicatorBadge
+                  label="BAR"
+                  value={indicators.macdBar}
+                  color={
+                    indicators.macdBar && indicators.macdBar >= 0 ? 'var(--up)' : 'var(--down)'
+                  }
+                />
+              </Col>
+              <Col span={3}>
+                <IndicatorBadge label="KDJ K" value={indicators.kdjK} color="#ec4899" />
+              </Col>
+              <Col span={3}>
+                <IndicatorBadge label="BOLL上轨" value={indicators.bollUpper} color="#14b8a6" />
+              </Col>
+            </Row>
+          </Card>
+        )}
+
+        {/* Kline chart */}
+        <Card
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Space>
+                <StockOutlined style={{ color: 'var(--accent)' }} />
+                <span style={{ fontWeight: 600 }}>K线图</span>
+              </Space>
+              <Space>
+                {['daily', 'weekly', 'monthly'].map(p => (
+                  <Button
+                    key={p}
+                    size="small"
+                    type={period === p ? 'primary' : 'default'}
+                    onClick={() => setPeriod(p)}
+                    style={{ borderRadius: 6, minWidth: 56 }}
+                  >
+                    {p === 'daily' ? '日线' : p === 'weekly' ? '周线' : '月线'}
+                  </Button>
+                ))}
+              </Space>
+            </div>
+          }
+        >
+          <ReactECharts option={getChartOption()} style={{ height: 480 }} />
+        </Card>
+
+        {/* Indicator charts */}
+        {indicatorHistory.length > 0 && (
+          <Card
+            title={
+              <Space>
+                <AreaChartOutlined style={{ color: 'var(--accent)' }} />
+                <span style={{ fontWeight: 600 }}>指标趋势</span>
+              </Space>
+            }
+          >
+            <Tabs
+              items={[
+                {
+                  key: 'macd',
+                  label: 'MACD',
+                  children: <ReactECharts option={getMacdChartOption()} style={{ height: 300 }} />,
+                },
+                {
+                  key: 'rsi',
+                  label: 'RSI',
+                  children: <ReactECharts option={getRsiChartOption()} style={{ height: 300 }} />,
+                },
+              ]}
+            />
+          </Card>
+        )}
+
+        {/* Fundamentals */}
+        {fundamentals && (
+          <Card
+            title={
+              <Space>
+                <InfoCircleOutlined style={{ color: 'var(--accent)' }} />
+                <span style={{ fontWeight: 600 }}>基本面数据</span>
+              </Space>
+            }
+          >
+            <Row gutter={[24, 16]}>
+              {[
+                { label: 'PE(TTM)', value: fundamentals.peTtm, suffix: '' },
+                { label: 'PB', value: fundamentals.pb, suffix: '' },
+                { label: 'ROE', value: fundamentals.roe, suffix: '%' },
+                { label: '毛利率', value: fundamentals.grossMargin, suffix: '%' },
+                { label: '营收增速', value: fundamentals.revenueGrowth, suffix: '%' },
+                { label: '负债率', value: fundamentals.debtRatio, suffix: '%' },
+              ].map(item => (
+                <Col span={4} key={item.label}>
+                  <div
+                    style={{
+                      padding: '16px 12px',
+                      background: 'var(--bg-elevated)',
+                      borderRadius: 'var(--radius-sm)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--text-muted)',
+                        marginBottom: 8,
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {item.label}
+                    </div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {item.value !== undefined && item.value !== null
+                        ? `${item.value.toFixed(2)}${item.suffix}`
+                        : '-'}
+                    </div>
+                  </div>
+                </Col>
+              ))}
+            </Row>
+          </Card>
+        )}
+      </div>
     </Spin>
   )
 }

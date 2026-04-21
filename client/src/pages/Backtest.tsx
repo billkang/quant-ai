@@ -11,11 +11,20 @@ import {
   Space,
   Row,
   Col,
-  Statistic,
+  Empty,
+  Typography,
 } from 'antd'
 import ReactECharts from 'echarts-for-react'
-import { PlayCircleOutlined, HistoryOutlined } from '@ant-design/icons'
+import {
+  PlayCircleOutlined,
+  HistoryOutlined,
+  ExperimentOutlined,
+  TrophyOutlined,
+  SwapOutlined,
+} from '@ant-design/icons'
 import { quantApi } from '../services/api'
+
+const { Title, Text } = Typography
 
 interface BacktestResult {
   id?: number
@@ -54,9 +63,7 @@ export default function Backtest() {
   const fetchHistory = async () => {
     try {
       const res = await quantApi.getBacktests(20)
-      if (res.data?.code === 0) {
-        setHistory(res.data.data || [])
-      }
+      if (res.data?.code === 0) setHistory(res.data.data || [])
     } catch (e) {
       console.error(e)
     }
@@ -88,17 +95,45 @@ export default function Backtest() {
   const getEquityChartOption = () => {
     if (!result?.equityCurve?.length) return {}
     return {
-      tooltip: { trigger: 'axis' },
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: '#1e293b',
+        borderColor: '#334155',
+        textStyle: { color: '#e2e8f0' },
+      },
       grid: { left: '10%', right: '8%', height: '70%' },
-      xAxis: { type: 'category', data: result.equityCurve.map(e => e.date) },
-      yAxis: { type: 'value' },
+      xAxis: {
+        type: 'category',
+        data: result.equityCurve.map(e => e.date),
+        axisLine: { lineStyle: { color: '#334155' } },
+        axisLabel: { color: '#64748b' },
+      },
+      yAxis: {
+        type: 'value',
+        splitLine: { lineStyle: { color: '#1e293b' } },
+        axisLabel: { color: '#64748b' },
+      },
       series: [
         {
           name: '权益',
           type: 'line',
           data: result.equityCurve.map(e => e.value),
           smooth: true,
-          areaStyle: { opacity: 0.2 },
+          lineStyle: { color: '#0ea5e9', width: 2 },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(14,165,233,0.2)' },
+                { offset: 1, color: 'rgba(14,165,233,0)' },
+              ],
+            },
+          },
         },
       ],
     }
@@ -117,7 +152,16 @@ export default function Backtest() {
       dataIndex: 'action',
       key: 'action',
       render: (action: string) => (
-        <Tag color={action === 'buy' ? 'red' : 'green'}>{action === 'buy' ? '买入' : '卖出'}</Tag>
+        <Tag
+          style={{
+            background: action === 'buy' ? 'var(--up-soft)' : 'var(--down-soft)',
+            color: action === 'buy' ? 'var(--up)' : 'var(--down)',
+            border: 'none',
+            fontWeight: 600,
+          }}
+        >
+          {action === 'buy' ? '买入' : '卖出'}
+        </Tag>
       ),
     },
     { title: '价格', dataIndex: 'price', key: 'price', render: (v: number) => `¥${v.toFixed(2)}` },
@@ -138,7 +182,14 @@ export default function Backtest() {
       dataIndex: 'totalReturn',
       key: 'totalReturn',
       render: (v: number) => (
-        <Tag color={v >= 0 ? 'red' : 'green'}>
+        <Tag
+          style={{
+            background: (v || 0) >= 0 ? 'var(--up-soft)' : 'var(--down-soft)',
+            color: (v || 0) >= 0 ? 'var(--up)' : 'var(--down)',
+            border: 'none',
+            fontWeight: 600,
+          }}
+        >
           {v >= 0 ? '+' : ''}
           {v?.toFixed(2)}%
         </Tag>
@@ -153,9 +204,54 @@ export default function Backtest() {
     { title: '交易次数', dataIndex: 'tradeCount', key: 'tradeCount' },
   ]
 
+  const MetricCard = ({
+    label,
+    value,
+    suffix,
+    color,
+  }: {
+    label: string
+    value: string | number
+    suffix?: string
+    color?: string
+  }) => (
+    <Card bodyStyle={{ padding: '16px 20px', textAlign: 'center' }}>
+      <div
+        style={{
+          fontSize: 11,
+          color: 'var(--text-muted)',
+          marginBottom: 8,
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: color || 'var(--text-primary)' }}>
+        {value}
+        {suffix && (
+          <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 4 }}>{suffix}</span>
+        )}
+      </div>
+    </Card>
+  )
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <Card title="策略回测" style={{ borderRadius: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <Title level={3} style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>
+          策略回测
+        </Title>
+        <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>基于历史数据验证策略表现</Text>
+      </div>
+
+      <Card
+        title={
+          <Space>
+            <ExperimentOutlined style={{ color: 'var(--accent)' }} />
+            <span style={{ fontWeight: 600 }}>回测配置</span>
+          </Space>
+        }
+      >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={6}>
@@ -206,74 +302,81 @@ export default function Backtest() {
       </Card>
 
       {showHistory && (
-        <Card title="回测历史" style={{ borderRadius: 16 }}>
-          <Table
-            columns={historyColumns}
-            dataSource={history}
-            rowKey="id"
-            pagination={false}
-            size="small"
-          />
+        <Card
+          title={
+            <Space>
+              <HistoryOutlined style={{ color: 'var(--accent)' }} />
+              <span style={{ fontWeight: 600 }}>回测历史</span>
+            </Space>
+          }
+        >
+          {history.length === 0 ? (
+            <Empty description="暂无回测记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          ) : (
+            <Table
+              columns={historyColumns}
+              dataSource={history}
+              rowKey="id"
+              pagination={false}
+              size="small"
+            />
+          )}
         </Card>
       )}
 
       {result && (
         <>
-          <Row gutter={16}>
+          <Row gutter={[16, 16]}>
             <Col span={4}>
-              <Card>
-                <Statistic
-                  title="总收益"
-                  value={result.totalReturn}
-                  precision={2}
-                  suffix="%"
-                  valueStyle={{ color: result.totalReturn >= 0 ? '#ff4d4f' : '#52c41a' }}
-                />
-              </Card>
+              <MetricCard
+                label="总收益"
+                value={result.totalReturn.toFixed(2)}
+                suffix="%"
+                color={result.totalReturn >= 0 ? 'var(--up)' : 'var(--down)'}
+              />
             </Col>
             <Col span={4}>
-              <Card>
-                <Statistic
-                  title="年化收益"
-                  value={result.annualizedReturn}
-                  precision={2}
-                  suffix="%"
-                />
-              </Card>
+              <MetricCard label="年化收益" value={result.annualizedReturn.toFixed(2)} suffix="%" />
             </Col>
             <Col span={4}>
-              <Card>
-                <Statistic
-                  title="最大回撤"
-                  value={result.maxDrawdown}
-                  precision={2}
-                  suffix="%"
-                  valueStyle={{ color: '#52c41a' }}
-                />
-              </Card>
+              <MetricCard
+                label="最大回撤"
+                value={result.maxDrawdown.toFixed(2)}
+                suffix="%"
+                color="var(--down)"
+              />
             </Col>
             <Col span={4}>
-              <Card>
-                <Statistic title="夏普比率" value={result.sharpeRatio} precision={2} />
-              </Card>
+              <MetricCard label="夏普比率" value={result.sharpeRatio.toFixed(2)} />
             </Col>
             <Col span={4}>
-              <Card>
-                <Statistic title="胜率" value={result.winRate} precision={2} suffix="%" />
-              </Card>
+              <MetricCard label="胜率" value={result.winRate.toFixed(2)} suffix="%" />
             </Col>
             <Col span={4}>
-              <Card>
-                <Statistic title="交易次数" value={result.tradeCount} />
-              </Card>
+              <MetricCard label="交易次数" value={result.tradeCount} />
             </Col>
           </Row>
 
-          <Card title="收益曲线" style={{ borderRadius: 16 }}>
+          <Card
+            title={
+              <Space>
+                <TrophyOutlined style={{ color: 'var(--accent)' }} />
+                <span style={{ fontWeight: 600 }}>收益曲线</span>
+              </Space>
+            }
+          >
             <ReactECharts option={getEquityChartOption()} style={{ height: 400 }} />
           </Card>
 
-          <Card title="交易记录" style={{ borderRadius: 16 }}>
+          <Card
+            title={
+              <Space>
+                <SwapOutlined style={{ color: 'var(--accent)' }} />
+                <span style={{ fontWeight: 600 }}>交易记录</span>
+              </Space>
+            }
+            bodyStyle={{ padding: 0 }}
+          >
             <Table
               columns={tradeColumns}
               dataSource={result.trades}
