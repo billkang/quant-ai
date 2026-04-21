@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^server/
+      - id: ruff-format
+        files: ^server/
+
+  - repo: local
+    hooks:
+      - id: lint-staged
+        name: lint-staged (client)
+        entry: bash -c 'cd client && pnpm exec lint-staged'
+        language: system
+        pass_filenames: false
+        always_run: false
+        stages: [pre-commit]
