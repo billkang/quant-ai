@@ -48,8 +48,8 @@ class SchedulerService:
 
     def daily_data_update(self):
         logger.info("Running daily data update job")
+        db = SessionLocal()
         try:
-            db = SessionLocal()
             watchlist = crud.get_watchlist(db)
             for item in watchlist:
                 try:
@@ -57,25 +57,27 @@ class SchedulerService:
                     stock_service.get_a_stock_kline(item.stock_code, "1mo")
                 except Exception as e:
                     logger.error(f"Failed to update {item.stock_code}: {e}")
-            db.close()
             logger.info("Daily data update completed")
         except Exception as e:
             logger.error(f"Daily data update failed: {e}")
+        finally:
+            db.close()
 
     def night_data_update(self):
         logger.info("Running night news update job")
+        db = SessionLocal()
         try:
-            db = SessionLocal()
             watchlist = crud.get_watchlist(db)
             for item in watchlist:
                 try:
                     news_service.get_stock_news(item.stock_code)
                 except Exception as e:
                     logger.error(f"Failed to fetch news for {item.stock_code}: {e}")
-            db.close()
             logger.info("Night news update completed")
         except Exception as e:
             logger.error(f"Night news update failed: {e}")
+        finally:
+            db.close()
 
     def morning_ai_analysis(self):
         logger.info("Running morning AI analysis job")

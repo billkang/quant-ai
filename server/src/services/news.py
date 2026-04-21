@@ -127,6 +127,10 @@ class NewsService:
             "count": len(news_data),
         }
 
+    def get_stock_news(self, symbol: str) -> list[dict]:
+        """Fetch raw stock news from external API (for AI analysis)."""
+        return self._fetch_stock_news(symbol)
+
     def _fetch_stock_news(self, symbol: str) -> list[dict]:
         try:
             df = ak.stock_news_em(symbol=symbol)

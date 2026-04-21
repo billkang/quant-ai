@@ -3,6 +3,7 @@ import json
 import redis
 
 from src.core.config import settings
+from src.models.database import get_db
 from src.services.stock_data import stock_service
 
 redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
@@ -33,3 +34,6 @@ async def get_stock(code: str) -> dict | None:
     if stock:
         redis_client.setex(cache_key, 60, json.dumps(stock))
     return stock or {}
+
+
+__all__ = ["get_db", "get_redis", "_get_stock_by_code", "get_stock", "redis_client"]
