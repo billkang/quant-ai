@@ -183,7 +183,7 @@ export default function News() {
         background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
         boxShadow: '0 8px 32px rgba(17, 153, 142, 0.3)'
       }}>
-        <Space align="center" gap={16}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{
             width: 56,
             height: 56,
@@ -201,7 +201,7 @@ export default function News() {
               聚合股票新闻、公告、宏观资讯
             </Text>
           </div>
-        </Space>
+        </div>
       </Card>
 
       <Card style={{ borderRadius: 16, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>

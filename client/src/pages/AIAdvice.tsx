@@ -11,11 +11,18 @@ interface Stock {
   changePercent: number
 }
 
+interface History {
+  stockCode: string
+  stockName: string
+  createdAt: string
+}
+
 export default function AIAdvice() {
   const [stockCode, setStockCode] = useState<string>('')
   const [stocks, setStocks] = useState<Stock[]>([])
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState('')
+  const [history, setHistory] = useState<History[]>([])
 
   useEffect(() => {
     fetch('/api/stocks/watchlist')
@@ -23,6 +30,17 @@ export default function AIAdvice() {
       .then(data => setStocks(data))
       .catch(() => setStocks([]))
   }, [])
+
+  useEffect(() => {
+    fetchHistory()
+  }, [])
+
+  const fetchHistory = () => {
+    fetch('/api/ai/history?limit=5')
+      .then(res => res.json())
+      .then(data => setHistory(data))
+      .catch(() => setHistory([]))
+  }
 
   const analyze = () => {
     if (!stockCode) return
@@ -51,19 +69,6 @@ export default function AIAdvice() {
       .finally(() => setLoading(false))
   }
 
-  const [history, setHistory] = useState<any[]>([])
-
-  const fetchHistory = () => {
-    fetch('/api/ai/history?limit=5')
-      .then(res => res.json())
-      .then(data => setHistory(data))
-      .catch(() => setHistory([]))
-  }
-
-  useEffect(() => {
-    fetchHistory()
-  }, [])
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <Card style={{ 
@@ -72,7 +77,7 @@ export default function AIAdvice() {
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)'
       }}>
-        <Space align="center" gap={16}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{
             width: 64,
             height: 64,
@@ -90,7 +95,7 @@ export default function AIAdvice() {
               基于大数据+AI模型，提供专业投资分析建议
             </Text>
           </div>
-        </Space>
+        </div>
       </Card>
 
       <Card style={{ borderRadius: 16, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
@@ -136,10 +141,8 @@ export default function AIAdvice() {
                 fontWeight: 600
               }}
             >
-              <Space>
-                <BulbOutlined />
-                {loading ? '分析中...' : '开始分析'}
-              </Space>
+              <BulbOutlined />
+              {loading ? '分析中...' : '开始分析'}
             </Button>
           </Space.Compact>
 
@@ -147,10 +150,10 @@ export default function AIAdvice() {
 
           {result && (
             <div style={{ padding: 24, background: '#fafafa', borderRadius: 12 }}>
-              <Space align="center" gap={12} style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                 <BulbOutlined style={{ fontSize: 20, color: '#faad14' }} />
                 <Title level={5} style={{ margin: 0 }}>AI 诊断结果</Title>
-              </Space>
+              </div>
               <Divider style={{ margin: '12px 0' }} />
               <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
                 {result.split('\n').map((line, i) => (
