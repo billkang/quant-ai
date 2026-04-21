@@ -1,16 +1,24 @@
 from contextlib import asynccontextmanager
 
+from alembic import command
+from alembic.config import Config as AlembicConfig
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api import ai, news, portfolio, stocks
-from src.models.database import Base, engine
+from src.core.config import settings
 from src.services.scheduler import scheduler_service
+
+
+def _run_migrations():
+    alembic_cfg = AlembicConfig("alembic.ini")
+    alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+    command.upgrade(alembic_cfg, "head")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    _run_migrations()
     await scheduler_service.start()
     yield
     await scheduler_service.stop()

@@ -11,8 +11,10 @@ COPY requirements.txt .
 # Install dependencies with uv
 RUN uv pip install --system -r requirements.txt
 
-# Copy source code
+# Copy source code and migrations
 COPY src/ ./src/
+COPY alembic.ini .
+COPY migrations/ ./migrations/
 
 EXPOSE 8000
 
