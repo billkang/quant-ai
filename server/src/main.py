@@ -119,11 +119,9 @@ async def get_kline(code: str, period: str = "daily"):
 @app.get("/api/news")
 async def get_news(category: str = "all", symbol: str | None = None):
     if symbol:
-        return news_service.get_stock_news(symbol)
-    elif category == "macro":
-        return news_service.get_macro_news()
+        return news_service.get_stock_news_from_db(symbol)
     else:
-        return news_service.get_stock_news(symbol or "")
+        return []
 
 
 @app.get("/api/news/sources")
@@ -183,25 +181,10 @@ async def delete_news_source(source_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/news/sources/{source_id}/fetch")
 async def fetch_news_source(source_id: int, db: Session = Depends(get_db)):
-    source = db.query(crud.models.NewsSource).filter(crud.models.NewsSource.id == source_id).first()
-    if not source:
-        raise HTTPException(status_code=404, detail="数据源不存在")
-
-    news_data = []
-    try:
-        if source.source_type == 'stock_news':
-            symbol = source.config.get('symbol', '')
-            news_data = news_service.get_stock_news(symbol)
-        elif source.source_type == 'stock_notices':
-            symbol = source.config.get('symbol', '')
-            news_data = news_service.get_stock_notices(symbol)
-        elif source.source_type == 'macro_news':
-            news_data = news_service.get_macro_news()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"拉取失败: {str(e)}")
-
-    crud.update_fetch_time(db, source_id)
-    return {'status': 'ok', 'count': len(news_data), 'data': news_data}
+    result = news_service.fetch_and_save_news(db, source_id)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=500, detail=result.get("message", "抓取失败"))
+    return result
 
 
 @app.get("/api/ai/analyze")

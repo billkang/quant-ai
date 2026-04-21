@@ -73,6 +73,20 @@ class NewsSource(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class NewsArticle(Base):
+    __tablename__ = "news_articles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_id = Column(Integer, index=True)
+    title = Column(String(500))
+    summary = Column(String(1000))
+    content = Column(String)
+    source = Column(String(100))
+    publish_time = Column(DateTime, nullable=True)
+    url = Column(String(500), unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class DiagnosticHistory(Base):
     __tablename__ = "diagnostic_history"
 

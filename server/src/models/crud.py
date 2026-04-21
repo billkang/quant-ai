@@ -147,6 +147,44 @@ def delete_news_source(db: Session, source_id: int) -> bool:
     return False
 
 
+def get_news_articles(db: Session, source_id: int = None, symbol: str = None, limit: int = 50) -> list[models.NewsArticle]:
+    query = db.query(models.NewsArticle)
+    if source_id:
+        query = query.filter(models.NewsArticle.source_id == source_id)
+    if symbol:
+        sources = db.query(models.NewsSource).all()
+        source_ids = [s.id for s in sources if s.config and s.config.get("symbol") == symbol]
+        query = query.filter(models.NewsArticle.source_id.in_(source_ids))
+    return query.order_by(models.NewsArticle.publish_time.desc()).limit(limit).all()
+
+
+def article_url_exists(db: Session, url: str) -> bool:
+    return db.query(models.NewsArticle).filter(models.NewsArticle.url == url).first() is not None
+
+
+def save_news_article(db: Session, source_id: int, title: str, summary: str, source: str, publish_time: datetime, url: str, content: str = None) -> models.NewsArticle:
+    article = models.NewsArticle(
+        source_id=source_id,
+        title=title,
+        summary=summary,
+        content=content,
+        source=source,
+        publish_time=publish_time,
+        url=url
+    )
+    db.add(article)
+    db.commit()
+    db.refresh(article)
+    return article
+
+
+def update_news_source_fetch_time(db: Session, source_id: int) -> None:
+    source = db.query(models.NewsSource).filter(models.NewsSource.id == source_id).first()
+    if source:
+        source.last_fetched_at = datetime.utcnow()
+        db.commit()
+
+
 def update_fetch_time(db: Session, source_id: int) -> None:
     source = db.query(models.NewsSource).filter(models.NewsSource.id == source_id).first()
     if source:

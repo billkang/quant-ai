@@ -22,14 +22,10 @@ interface NewsSource {
   lastFetchedAt: string | null
 }
 
-const DEFAULT_SOURCES: Array<{name: string, source_type: string, config: Record<string, string>, interval_minutes: number}> = [
-  { name: '大盘行情', source_type: 'stock_news', config: { symbol: '000001' }, interval_minutes: 60 },
-  { name: '创业板指', source_type: 'stock_news', config: { symbol: '399006' }, interval_minutes: 60 },
-  { name: '科创板', source_type: 'stock_news', config: { symbol: '000688' }, interval_minutes: 60 },
-  { name: '贵州茅台', source_type: 'stock_news', config: { symbol: '600519' }, interval_minutes: 60 },
-  { name: '宁德时代', source_type: 'stock_news', config: { symbol: '300750' }, interval_minutes: 60 },
-  { name: '腾讯控股', source_type: 'stock_news', config: { symbol: '00700.HK' }, interval_minutes: 60 },
-  { name: '阿里巴巴', source_type: 'stock_news', config: { symbol: '9988.HK' }, interval_minutes: 60 },
+const MARKET_SOURCES: Array<{name: string, source_type: string, config: Record<string, string>, interval_minutes: number}> = [
+  { name: '大盘行情', source_type: 'stock_news', config: { symbol: '000001' }, interval_minutes: 30 },
+  { name: '创业板指', source_type: 'stock_news', config: { symbol: '399006' }, interval_minutes: 30 },
+  { name: '科创板', source_type: 'stock_news', config: { symbol: '000688' }, interval_minutes: 30 },
 ]
 
 export default function News() {
@@ -73,17 +69,43 @@ export default function News() {
   }
 
   const initDefaultSources = async () => {
-    for (const src of DEFAULT_SOURCES) {
+    const watchlistRes = await fetch('/api/stocks/watchlist')
+    const watchlist = await watchlistRes.json()
+    
+    const existingSymbols = new Set()
+    
+    for (const src of MARKET_SOURCES) {
       try {
         await fetch('/api/news/sources', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(src)
         })
+        existingSymbols.add(src.config.symbol)
       } catch (e) {
-        console.error('Failed to add source:', e)
+        console.error('Failed to add market source:', e)
       }
     }
+    
+    for (const stock of watchlist) {
+      if (!existingSymbols.has(stock.code)) {
+        try {
+          await fetch('/api/news/sources', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: stock.name,
+              source_type: 'stock_news',
+              config: { symbol: stock.code },
+              interval_minutes: 60
+            })
+          })
+        } catch (e) {
+          console.error('Failed to add watchlist source:', e)
+        }
+      }
+    }
+    
     await fetchSources()
   }
 
@@ -224,11 +246,11 @@ export default function News() {
               value={selectedStock}
               onChange={handleStockChange}
               options={[
-                ...stocks.map(s => ({ value: s.code, label: `${s.name} (${s.code})` })),
-                ...DEFAULT_SOURCES.filter(s => s.source_type === 'stock_news').map(s => ({
+                ...MARKET_SOURCES.map(s => ({
                   value: s.config.symbol,
                   label: s.name
-                }))
+                })),
+                ...stocks.map(s => ({ value: s.code, label: `${s.name} (${s.code})` }))
               ]}
             />
             <Button 
