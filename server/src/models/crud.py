@@ -186,3 +186,11 @@ def get_diagnostic_history(
     if stock_code:
         query = query.filter(models.DiagnosticHistory.stock_code == stock_code)
     return query.order_by(models.DiagnosticHistory.created_at.desc()).limit(limit).all()
+
+
+def get_diagnostic_history_by_id(
+    db: Session, history_id: int
+) -> models.DiagnosticHistory | None:
+    return db.query(models.DiagnosticHistory).filter(
+        models.DiagnosticHistory.id == history_id
+    ).first()

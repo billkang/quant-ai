@@ -220,8 +220,8 @@ class AnalyzeV2Request(BaseModel):
     dimensions: list[str] = ["fundamental", "technical", "risk"]
 
 
-@app.post("/api/ai/analyze/v2")
-async def analyze_stock_v2(req: AnalyzeV2Request, db: Session = Depends(get_db)):
+@app.post("/api/ai/analyze")
+async def analyze_stock(req: AnalyzeV2Request, db: Session = Depends(get_db)):
     stock = await get_stock(req.code)
     if not stock:
         raise HTTPException(status_code=404, detail="股票不存在")
@@ -230,22 +230,22 @@ async def analyze_stock_v2(req: AnalyzeV2Request, db: Session = Depends(get_db))
         from src.services.ai_diagnostic import diagnostic_service
 
         news = news_service.get_stock_news(req.code)
-        advice = diagnostic_service.analyze(req.code, stock, news)
+        result = diagnostic_service.analyze(req.code, stock, news)
 
         try:
             crud.save_diagnostic_history(
                 db,
                 stock_code=req.code,
                 stock_name=stock.get("name", ""),
-                fundamental_analysis="",
-                technical_analysis="",
-                risk_analysis="",
-                final_report=advice,
+                fundamental_analysis=result.get("fundamental_analysis", ""),
+                technical_analysis=result.get("technical_analysis", ""),
+                risk_analysis=result.get("risk_analysis", ""),
+                final_report=result.get("final_report", ""),
             )
         except Exception:
             pass
 
-        return {"code": req.code, "advice": advice}
+        return {"code": req.code, **result}
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -264,6 +264,24 @@ async def get_diagnostic_history(code: str = None, limit: int = 10, db: Session 
         }
         for h in history
     ]
+
+
+@app.get("/api/ai/history/{history_id}")
+async def get_diagnostic_history_detail(history_id: int, db: Session = Depends(get_db)):
+    h = crud.get_diagnostic_history_by_id(db, history_id)
+    if not h:
+        raise HTTPException(status_code=404, detail="诊断记录不存在")
+    return {
+        "id": h.id,
+        "stockCode": h.stock_code,
+        "stockName": h.stock_name,
+        "fundamentalAnalysis": h.fundamental_analysis,
+        "technicalAnalysis": h.technical_analysis,
+        "riskAnalysis": h.risk_analysis,
+        "finalReport": h.final_report,
+        "score": h.score,
+        "createdAt": h.created_at.isoformat() if h.created_at else None,
+    }
 
 
 @app.get("/api/ai/chat")

@@ -13,7 +13,6 @@ RUN uv pip install --system -r requirements.txt
 
 # Copy source code
 COPY src/ ./src/
-COPY .env.example .env
 
 EXPOSE 8000
 

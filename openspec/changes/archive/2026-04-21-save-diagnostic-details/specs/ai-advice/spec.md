@@ -39,43 +39,6 @@ Response:
 }
 ```
 
-### 获取诊断历史列表
-```
-GET /api/ai/history?code={stock_code}&limit={limit}
-```
-Response:
-```json
-[
-  {
-    "id": 1,
-    "stockCode": "600519",
-    "stockName": "贵州茅台",
-    "finalReport": "最终建议...",
-    "score": "买入",
-    "createdAt": "2024-01-15T10:00:00"
-  }
-]
-```
-
-### 获取单条诊断详情
-```
-GET /api/ai/history/{id}
-```
-Response:
-```json
-{
-  "id": 1,
-  "stockCode": "600519",
-  "stockName": "贵州茅台",
-  "fundamentalAnalysis": "基本面分析...",
-  "technicalAnalysis": "技术面分析...",
-  "riskAnalysis": "风险评估...",
-  "finalReport": "最终建议...",
-  "score": "买入",
-  "createdAt": "2024-01-15T10:00:00"
-}
-```
-
 ## 环境变量
 
 | 变量 | 说明 | 默认值 |

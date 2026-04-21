@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Card, Select, Button, Typography, Space, Empty, Divider, Row, Col, message } from 'antd'
+import { Card, Select, Button, Typography, Space, Empty, Divider, Row, Col, message, Modal } from 'antd'
 import { RobotOutlined, StockOutlined, BulbOutlined, RocketOutlined } from '@ant-design/icons'
 
 const { Text, Title } = Typography
@@ -12,8 +12,14 @@ interface Stock {
 }
 
 interface History {
+  id: number
   stockCode: string
   stockName: string
+  finalReport: string
+  fundamentalAnalysis?: string
+  technicalAnalysis?: string
+  riskAnalysis?: string
+  score: string
   createdAt: string
 }
 
@@ -23,6 +29,9 @@ export default function AIAdvice() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState('')
   const [history, setHistory] = useState<History[]>([])
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [detailData, setDetailData] = useState<History | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
 
   useEffect(() => {
     fetch('/api/stocks/watchlist')
@@ -42,12 +51,24 @@ export default function AIAdvice() {
       .catch(() => setHistory([]))
   }
 
+  const viewDetail = (id: number) => {
+    setDetailLoading(true)
+    fetch(`/api/ai/history/${id}`)
+      .then(res => res.json())
+      .then(data => {
+        setDetailData(data)
+        setDetailOpen(true)
+      })
+      .catch(() => message.error('获取详情失败'))
+      .finally(() => setDetailLoading(false))
+  }
+
   const analyze = () => {
     if (!stockCode) return
     setLoading(true)
     setResult('')
 
-    fetch(`/api/ai/analyze/v2`, {
+    fetch(`/api/ai/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: stockCode, dimensions: ['fundamental', 'technical', 'risk'] }),
@@ -58,7 +79,7 @@ export default function AIAdvice() {
           message.error(data.detail)
           setResult('分析失败：' + data.detail)
         } else {
-          setResult(data.advice || '未获取到分析结果')
+          setResult(data.finalReport || data.advice || '未获取到分析结果')
           fetchHistory()
         }
       })
@@ -166,6 +187,49 @@ export default function AIAdvice() {
             </div>
           )}
 
+          <Modal
+            title={`${detailData?.stockName} (${detailData?.stockCode}) - 诊断详情`}
+            open={detailOpen}
+            onCancel={() => setDetailOpen(false)}
+            footer={null}
+            width={700}
+            loading={detailLoading}
+          >
+            {detailData && (
+              <div>
+                <Text type="secondary">
+                  {detailData.createdAt ? new Date(detailData.createdAt).toLocaleString() : ''}
+                </Text>
+                {detailData.score && (
+                  <>
+                    <Divider />
+                    <Text style={{ fontSize: 18, color: '#52c41a' }} strong>
+                      评级：{detailData.score}
+                    </Text>
+                  </>
+                )}
+                <Divider />
+                <Title level={5}>基本面分析</Title>
+                <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, marginBottom: 16, background: '#fafafa', padding: 12, borderRadius: 8 }}>
+                  {detailData.fundamentalAnalysis || detailData.finalReport || '暂无'}
+                </div>
+                <Title level={5}>技术面分析</Title>
+                <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, marginBottom: 16, background: '#fafafa', padding: 12, borderRadius: 8 }}>
+                  {detailData.technicalAnalysis || '暂无'}
+                </div>
+                <Title level={5}>风险评估</Title>
+                <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, marginBottom: 16, background: '#fafafa', padding: 12, borderRadius: 8 }}>
+                  {detailData.riskAnalysis || '暂无'}
+                </div>
+                <Divider />
+                <Title level={5}>最终建议</Title>
+                <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, background: '#f0f5ff', padding: 12, borderRadius: 8, border: '1px solid #adc6ff' }}>
+                  {detailData.finalReport || '暂无'}
+                </div>
+              </div>
+            )}
+          </Modal>
+
           {!result && !loading && stocks.length === 0 && (
             <Empty 
               description="暂无自选股，请在首页添加自选股后使用 AI 诊断" 
@@ -187,9 +251,18 @@ export default function AIAdvice() {
           <Title level={4} style={{ marginBottom: 16 }}>诊断历史</Title>
           <Space direction="vertical" style={{ width: '100%' }} size="small">
             {history.map((h, i) => (
-              <Card key={i} size="small" style={{ borderRadius: 8 }}>
+              <Card 
+                key={i} 
+                size="small" 
+                style={{ borderRadius: 8, cursor: 'pointer' }}
+                hoverable
+                onClick={() => viewDetail(h.id)}
+              >
                 <Space direction="vertical" size={0}>
-                  <Text strong>{h.stockName} ({h.stockCode})</Text>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    <Text strong>{h.stockName} ({h.stockCode})</Text>
+                    {h.score && <Text code>{h.score}</Text>}
+                  </div>
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     {h.createdAt ? new Date(h.createdAt).toLocaleString() : ''}
                   </Text>

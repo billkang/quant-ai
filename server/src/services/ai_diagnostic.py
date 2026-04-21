@@ -153,9 +153,14 @@ class AIDiagnosticService:
         except Exception as e:
             return {"final_report": f"综合分析失败: {str(e)}"}
 
-    def analyze(self, stock_code: str, stock_data: dict, news: list = []) -> str:
+    def analyze(self, stock_code: str, stock_data: dict, news: list = []) -> dict:
         if not self.api_key:
-            return "AI API 未配置，请在环境变量中设置 AI_API_KEY"
+            return {
+                "fundamental_analysis": "",
+                "technical_analysis": "",
+                "risk_analysis": "",
+                "final_report": "AI API 未配置，请在环境变量中设置 AI_API_KEY",
+            }
 
         try:
             graph = self.create_diagnostic_graph()
@@ -169,9 +174,19 @@ class AIDiagnosticService:
                 "final_report": "",
             }
             result = graph.invoke(initial_state)
-            return result.get("final_report", "分析结果生成失败")
+            return {
+                "fundamental_analysis": result.get("fundamental_analysis", ""),
+                "technical_analysis": result.get("technical_analysis", ""),
+                "risk_analysis": result.get("risk_analysis", ""),
+                "final_report": result.get("final_report", "分析结果生成失败"),
+            }
         except Exception as e:
-            return f"分析失败: {str(e)}"
+            return {
+                "fundamental_analysis": "",
+                "technical_analysis": "",
+                "risk_analysis": "",
+                "final_report": f"分析失败: {str(e)}",
+            }
 
 
 diagnostic_service = AIDiagnosticService()
