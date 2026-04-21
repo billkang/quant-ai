@@ -1,3 +1,4 @@
+import json
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -39,9 +40,9 @@ redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
 
 def _get_stock_by_code(code: str) -> dict | None:
     code_upper = code.upper()
-    if '.HK' in code_upper:
+    if ".HK" in code_upper:
         return stock_service.get_hk_stock_quote(code)
-    elif '.US' in code_upper:
+    elif ".US" in code_upper:
         return stock_service.get_hk_stock_quote(code)
     else:
         return stock_service.get_a_stock_quote(code)
@@ -62,26 +63,30 @@ async def get_watchlist(db: Session = Depends(get_db)):
 
 @app.post("/api/stocks/watchlist")
 async def add_to_watchlist(stock_code: str, db: Session = Depends(get_db)):
-    existing = db.query(crud.models.Watchlist).filter(crud.models.Watchlist.stock_code == stock_code).first()
+    existing = (
+        db.query(crud.models.Watchlist)
+        .filter(crud.models.Watchlist.stock_code == stock_code)
+        .first()
+    )
     if existing:
         return {"status": "error", "message": "股票已存在"}
 
     stock_info = _get_stock_by_code(stock_code)
-    if not stock_info or not stock_info.get('name'):
+    if not stock_info or not stock_info.get("name"):
         return {"status": "error", "message": "无法获取股票信息"}
 
-    crud.add_to_watchlist(db, stock_code, stock_info.get('name', ''))
+    crud.add_to_watchlist(db, stock_code, stock_info.get("name", ""))
 
     code_upper = stock_code.upper()
     period = "6mo"
-    if '.HK' in code_upper or '.US' in code_upper:
+    if ".HK" in code_upper or ".US" in code_upper:
         kline_data = stock_service.get_hk_stock_kline(stock_code, period)
     else:
         kline_data = stock_service.get_a_stock_kline(stock_code, period)
     if kline_data:
         crud.save_stock_kline(db, stock_code, period, kline_data)
 
-    return {"status": "ok", "stock_code": stock_code, "name": stock_info.get('name', '')}
+    return {"status": "ok", "stock_code": stock_code, "name": stock_info.get("name", "")}
 
 
 @app.delete("/api/stocks/watchlist/{stock_code}")
@@ -95,13 +100,11 @@ async def get_stock(code: str):
     cache_key = f"stock:{code}"
     cached = redis_client.get(cache_key)
     if cached:
-        import json
         return json.loads(cached)
 
     stock = _get_stock_by_code(code)
 
     if stock:
-        import json
         redis_client.setex(cache_key, 60, json.dumps(stock))
     return stock or {}
 
@@ -109,7 +112,7 @@ async def get_stock(code: str):
 @app.get("/api/stocks/{code}/kline")
 async def get_kline(code: str, period: str = "daily"):
     code_upper = code.upper()
-    if '.HK' in code_upper or '.US' in code_upper:
+    if ".HK" in code_upper or ".US" in code_upper:
         klines = stock_service.get_hk_stock_kline(code, period)
     else:
         klines = stock_service.get_a_stock_kline(code, period)
@@ -129,13 +132,13 @@ async def get_news_sources(db: Session = Depends(get_db)):
     sources = crud.get_news_sources(db)
     return [
         {
-            'id': s.id,
-            'name': s.name,
-            'sourceType': s.source_type,
-            'config': s.config,
-            'intervalMinutes': s.interval_minutes,
-            'enabled': bool(s.enabled),
-            'lastFetchedAt': s.last_fetched_at.isoformat() if s.last_fetched_at else None,
+            "id": s.id,
+            "name": s.name,
+            "sourceType": s.source_type,
+            "config": s.config,
+            "intervalMinutes": s.interval_minutes,
+            "enabled": bool(s.enabled),
+            "lastFetchedAt": s.last_fetched_at.isoformat() if s.last_fetched_at else None,
         }
         for s in sources
     ]
@@ -149,12 +152,11 @@ class NewsSourceCreate(BaseModel):
 
 
 @app.post("/api/news/sources")
-async def add_news_source_body(
-    body: NewsSourceCreate,
-    db: Session = Depends(get_db)
-):
-    source = crud.add_news_source(db, body.name, body.source_type, body.config, body.interval_minutes)
-    return {'id': source.id, 'status': 'ok'}
+async def add_news_source_body(body: NewsSourceCreate, db: Session = Depends(get_db)):
+    source = crud.add_news_source(
+        db, body.name, body.source_type, body.config, body.interval_minutes
+    )
+    return {"id": source.id, "status": "ok"}
 
 
 @app.put("/api/news/sources/{source_id}")
@@ -165,18 +167,20 @@ async def update_news_source(
     config: dict = None,
     interval_minutes: int = None,
     enabled: bool = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    source = crud.update_news_source(db, source_id, name, source_type, config, interval_minutes, enabled)
+    source = crud.update_news_source(
+        db, source_id, name, source_type, config, interval_minutes, enabled
+    )
     if not source:
         raise HTTPException(status_code=404, detail="数据源不存在")
-    return {'status': 'ok'}
+    return {"status": "ok"}
 
 
 @app.delete("/api/news/sources/{source_id}")
 async def delete_news_source(source_id: int, db: Session = Depends(get_db)):
     crud.delete_news_source(db, source_id)
-    return {'status': 'ok'}
+    return {"status": "ok"}
 
 
 @app.post("/api/news/sources/{source_id}/fetch")
@@ -188,7 +192,7 @@ async def fetch_news_source(source_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/api/ai/analyze")
-async def analyze_stock(code: str):
+async def analyze_stock_legacy(code: str):
     stock = await get_stock(code)
     if not stock:
         raise HTTPException(status_code=404, detail="股票不存在")
@@ -230,7 +234,7 @@ async def analyze_stock(req: AnalyzeV2Request, db: Session = Depends(get_db)):
 
         return {"code": req.code, **result}
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/ai/history")
@@ -288,29 +292,31 @@ async def get_portfolio(db: Session = Depends(get_db)):
         else:
             current = stock_service.get_hk_stock_quote(code)
 
-        current_price = current.get('price', 0) if current else 0
+        current_price = current.get("price", 0) if current else 0
         value = current_price * pos.quantity
         cost = pos.cost_price * pos.quantity
         profit = value - cost
         profit_percent = (profit / cost * 100) if cost > 0 else 0
 
-        result.append({
-            'code': pos.stock_code,
-            'name': pos.stock_name,
-            'quantity': pos.quantity,
-            'costPrice': pos.cost_price,
-            'currentPrice': current_price,
-            'profit': profit,
-            'profitPercent': profit_percent,
-        })
+        result.append(
+            {
+                "code": pos.stock_code,
+                "name": pos.stock_name,
+                "quantity": pos.quantity,
+                "costPrice": pos.cost_price,
+                "currentPrice": current_price,
+                "profit": profit,
+                "profitPercent": profit_percent,
+            }
+        )
         total_value += value
         total_cost += cost
 
     return {
-        'positions': result,
-        'totalValue': total_value,
-        'totalCost': total_cost,
-        'totalProfit': total_value - total_cost,
+        "positions": result,
+        "totalValue": total_value,
+        "totalCost": total_cost,
+        "totalProfit": total_value - total_cost,
     }
 
 
@@ -321,9 +327,9 @@ async def add_position(
     quantity: int,
     cost_price: float,
     buy_date: str | None = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    date = datetime.strptime(buy_date, '%Y-%m-%d') if buy_date else datetime.now()
+    date = datetime.strptime(buy_date, "%Y-%m-%d") if buy_date else datetime.now()
     crud.add_position(db, stock_code, stock_name, quantity, cost_price, date)
     return {"status": "ok"}
 
@@ -339,13 +345,13 @@ async def get_transactions(limit: int = 50, db: Session = Depends(get_db)):
     transactions = crud.get_transactions(db, limit)
     return [
         {
-            'code': t.stock_code,
-            'name': t.stock_name,
-            'type': t.type,
-            'quantity': t.quantity,
-            'price': t.price,
-            'commission': t.commission,
-            'date': t.trade_date.isoformat() if t.trade_date else None,
+            "code": t.stock_code,
+            "name": t.stock_name,
+            "type": t.type,
+            "quantity": t.quantity,
+            "price": t.price,
+            "commission": t.commission,
+            "date": t.trade_date.isoformat() if t.trade_date else None,
         }
         for t in transactions
     ]
@@ -358,4 +364,5 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

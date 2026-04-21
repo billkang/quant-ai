@@ -1,9 +1,8 @@
-from typing import TypedDict, Annotated, Sequence
-import operator
+from typing import TypedDict
 
-from langgraph.graph import StateGraph, END
+from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langgraph.graph import END, StateGraph
 
 from src.core.config import settings
 
@@ -63,10 +62,10 @@ class AIDiagnosticService:
 
     def fundamental_node(self, state: DiagnosticState) -> dict:
         stock = state.get("stock_data", {})
-        prompt = f"""请分析 {stock.get('name')} ({stock.get('code')}) 的基本面:
+        prompt = f"""请分析 {stock.get("name")} ({stock.get("code")}) 的基本面:
 
-- 当前价格: {stock.get('price')}
-- 涨跌: {stock.get('change', 0)} ({stock.get('changePercent', 0)}%)
+- 当前价格: {stock.get("price")}
+- 涨跌: {stock.get("change", 0)} ({stock.get("changePercent", 0)}%)
 
 请从以下角度分析:
 1. 公司概况及行业地位
@@ -84,10 +83,10 @@ class AIDiagnosticService:
 
     def technical_node(self, state: DiagnosticState) -> dict:
         stock = state.get("stock_data", {})
-        prompt = f"""请分析 {stock.get('name')} ({stock.get('code')}) 的技术面:
+        prompt = f"""请分析 {stock.get("name")} ({stock.get("code")}) 的技术面:
 
-- 当前价格: {stock.get('price')}
-- 涨跌幅: {stock.get('changePercent', 0)}%
+- 当前价格: {stock.get("price")}
+- 涨跌幅: {stock.get("changePercent", 0)}%
 
 请从以下角度分析:
 1. 短期趋势 (5日、10日均线)
@@ -105,10 +104,10 @@ class AIDiagnosticService:
 
     def risk_node(self, state: DiagnosticState) -> dict:
         stock = state.get("stock_data", {})
-        prompt = f"""请评估 {stock.get('name')} ({stock.get('code')}) 的风险:
+        prompt = f"""请评估 {stock.get("name")} ({stock.get("code")}) 的风险:
 
-- 当前价格: {stock.get('price')}
-- 涨跌幅: {stock.get('changePercent', 0)}%
+- 当前价格: {stock.get("price")}
+- 涨跌幅: {stock.get("changePercent", 0)}%
 
 请从以下角度评估:
 1. 市场风险
@@ -153,7 +152,9 @@ class AIDiagnosticService:
         except Exception as e:
             return {"final_report": f"综合分析失败: {str(e)}"}
 
-    def analyze(self, stock_code: str, stock_data: dict, news: list = []) -> dict:
+    def analyze(self, stock_code: str, stock_data: dict, news: list = None) -> dict:
+        if news is None:
+            news = []
         if not self.api_key:
             return {
                 "fundamental_analysis": "",

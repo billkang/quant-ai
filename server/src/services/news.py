@@ -1,11 +1,9 @@
-
 from datetime import datetime, timedelta
-from typing import Optional
 
 import akshare as ak
 from sqlalchemy.orm import Session
 
-from src.models import models
+from src.models import crud, models
 from src.models.database import SessionLocal
 
 
@@ -14,7 +12,7 @@ class NewsService:
         db = SessionLocal()
         try:
             articles = crud.get_news_articles(db, symbol=symbol, limit=limit)
-            
+
             if not articles:
                 sources = db.query(models.NewsSource).all()
                 source = None
@@ -22,21 +20,21 @@ class NewsService:
                     if s.config and s.config.get("symbol") == symbol:
                         source = s
                         break
-                
+
                 if not source:
                     source = models.NewsSource(
                         name=symbol,
-                        source_type='stock_news',
-                        config={'symbol': symbol},
-                        interval_minutes=60
+                        source_type="stock_news",
+                        config={"symbol": symbol},
+                        interval_minutes=60,
                     )
                     db.add(source)
                     db.commit()
                     db.refresh(source)
-                
+
                 self.fetch_and_save_news(db, source.id)
                 articles = crud.get_news_articles(db, symbol=symbol, limit=limit)
-            
+
             return [
                 {
                     "id": str(a.id),
@@ -64,12 +62,12 @@ class NewsService:
                     "skipped": 1,
                     "new": 0,
                     "count": 0,
-                    "message": f"距离上次抓取仅 {elapsed.total_seconds()/60:.0f} 分钟，未到间隔 {source.interval_minutes} 分钟"
+                    "message": f"距离上次抓取仅 {elapsed.total_seconds() / 60:.0f} 分钟，未到间隔 {source.interval_minutes} 分钟",
                 }
 
         symbol = source.config.get("symbol", "") if source.config else ""
         news_data = []
-        
+
         try:
             if source.source_type == "stock_news":
                 news_data = self._fetch_stock_news(symbol)
@@ -93,10 +91,12 @@ class NewsService:
                 if item.get("发布时间"):
                     try:
                         publish_time = datetime.strptime(str(item["发布时间"]), "%Y-%m-%d %H:%M:%S")
-                    except:
+                    except Exception:
                         try:
-                            publish_time = datetime.strptime(str(item["发布时间"])[:19], "%Y-%m-%d %H:%M:%S")
-                        except:
+                            publish_time = datetime.strptime(
+                                str(item["发布时间"])[:19], "%Y-%m-%d %H:%M:%S"
+                            )
+                        except Exception:
                             pass
 
                 summary = str(item.get("新闻内容", ""))[:200] if item.get("新闻内容") else ""
@@ -111,7 +111,7 @@ class NewsService:
                     source=item.get("文章来源", ""),
                     publish_time=publish_time,
                     url=url,
-                    content=item.get("新闻内容", "")
+                    content=item.get("新闻内容", ""),
                 )
                 new_count += 1
             except Exception as e:
@@ -158,5 +158,4 @@ class NewsService:
             return []
 
 
-from src.models import crud
 news_service = NewsService()

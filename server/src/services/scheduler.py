@@ -5,8 +5,8 @@ from apscheduler.triggers.cron import CronTrigger
 
 from ..models import crud
 from ..models.database import SessionLocal
-from .stock_data import stock_service
 from .news import news_service
+from .stock_data import stock_service
 
 logger = logging.getLogger(__name__)
 
@@ -22,21 +22,21 @@ class SchedulerService:
             CronTrigger(hour=16, minute=0),
             id="daily_data_update",
             name="每日行情数据更新",
-            replace_existing=True
+            replace_existing=True,
         )
         self.scheduler.add_job(
             self.night_data_update,
             CronTrigger(hour=18, minute=0),
             id="night_data_update",
             name="盘后新闻更新",
-            replace_existing=True
+            replace_existing=True,
         )
         self.scheduler.add_job(
             self.morning_ai_analysis,
             CronTrigger(hour=8, minute=0),
             id="morning_ai_analysis",
             name="早盘AI分析",
-            replace_existing=True
+            replace_existing=True,
         )
         self.scheduler.start()
         logger.info("Scheduler started")

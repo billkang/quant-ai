@@ -48,7 +48,7 @@ export default function StockDetail() {
     const periodMap: Record<string, string> = {
       daily: '6mo',
       weekly: '6mo',
-      monthly: '1y'
+      monthly: '1y',
     }
     fetch(`/api/stocks/${code}/kline?period=${periodMap[period] || '6mo'}`)
       .then(res => res.json())
@@ -65,23 +65,21 @@ export default function StockDetail() {
     return {
       tooltip: {
         trigger: 'axis',
-        axisPointer: { type: 'cross' }
+        axisPointer: { type: 'cross' },
       },
       grid: [
         { left: '10%', right: '8%', height: '50%' },
-        { left: '10%', right: '8%', top: '68%', height: '16%' }
+        { left: '10%', right: '8%', top: '68%', height: '16%' },
       ],
       xAxis: [
         { type: 'category', data: dates, gridIndex: 0 },
-        { type: 'category', data: dates, gridIndex: 1 }
+        { type: 'category', data: dates, gridIndex: 1 },
       ],
       yAxis: [
         { scale: true, gridIndex: 0 },
-        { scale: true, gridIndex: 1, splitNumber: 2 }
+        { scale: true, gridIndex: 1, splitNumber: 2 },
       ],
-      dataZoom: [
-        { type: 'inside', xAxisIndex: [0, 1], start: 60, end: 100 }
-      ],
+      dataZoom: [{ type: 'inside', xAxisIndex: [0, 1], start: 60, end: 100 }],
       series: [
         {
           name: 'Kline',
@@ -91,8 +89,8 @@ export default function StockDetail() {
             color: '#ef4444',
             color0: '#22c55e',
             borderColor: '#ef4444',
-            borderColor0: '#22c55e'
-          }
+            borderColor0: '#22c55e',
+          },
         },
         {
           name: 'Volume',
@@ -102,11 +100,11 @@ export default function StockDetail() {
           data: klines.map((k, i) => ({
             value: k.volume,
             itemStyle: {
-              color: closes[i] >= opens[i] ? '#ef4444' : '#22c55e'
-            }
-          }))
-        }
-      ]
+              color: closes[i] >= opens[i] ? '#ef4444' : '#22c55e',
+            },
+          })),
+        },
+      ],
     }
   }
 
@@ -117,7 +115,11 @@ export default function StockDetail() {
     { key: '1', label: 'Open', children: stock?.open?.toFixed(2) || '-' },
     { key: '2', label: 'High', children: stock?.high?.toFixed(2) || '-' },
     { key: '3', label: 'Low', children: stock?.low?.toFixed(2) || '-' },
-    { key: '4', label: 'Volume', children: stock ? `${(stock.volume / 100000000).toFixed(2)}亿` : '-' },
+    {
+      key: '4',
+      label: 'Volume',
+      children: stock ? `${(stock.volume / 100000000).toFixed(2)}亿` : '-',
+    },
   ]
 
   return (
@@ -139,7 +141,8 @@ export default function StockDetail() {
               valueStyle={{ color: isUp ? '#ff4d4f' : '#52c41a' }}
             />
             <Tag color={isUp ? 'red' : 'green'} style={{ fontSize: 16, marginTop: 8 }}>
-              {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
+              {priceChange >= 0 ? '+' : ''}
+              {priceChange.toFixed(2)}%
             </Tag>
           </Col>
           <Col span={12}>

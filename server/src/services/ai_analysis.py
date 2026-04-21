@@ -1,4 +1,3 @@
-
 import httpx
 
 from src.core.config import settings
@@ -15,9 +14,9 @@ class AIService:
             return "AI API 未配置，请在环境变量中设置 AI_API_KEY"
 
         prompt = f"""请分析以下股票:
-股票信息: {stock_data.get('name')} ({stock_data.get('code')})
-当前价格: {stock_data.get('price')}
-涨跌幅: {stock_data.get('changePercent')}%
+股票信息: {stock_data.get("name")} ({stock_data.get("code")})
+当前价格: {stock_data.get("price")}
+涨跌幅: {stock_data.get("changePercent")}%
 最新新闻:
 {chr(10).join([f"- {n.get('title', '')}" for n in news[:5]])}
 

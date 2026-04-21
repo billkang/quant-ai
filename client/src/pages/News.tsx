@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Card, Row, Col, Select, Button, Space, message, Typography, Empty, Tabs, Spin } from 'antd'
-import { FileTextOutlined, DatabaseOutlined, GlobalOutlined, ReloadOutlined, StockOutlined } from '@ant-design/icons'
+import {
+  FileTextOutlined,
+  DatabaseOutlined,
+  GlobalOutlined,
+  ReloadOutlined,
+  StockOutlined,
+} from '@ant-design/icons'
 
 const { Title, Text } = Typography
 
@@ -22,16 +28,31 @@ interface NewsSource {
   lastFetchedAt: string | null
 }
 
-const MARKET_SOURCES: Array<{name: string, source_type: string, config: Record<string, string>, interval_minutes: number}> = [
-  { name: '大盘行情', source_type: 'stock_news', config: { symbol: '000001' }, interval_minutes: 30 },
-  { name: '创业板指', source_type: 'stock_news', config: { symbol: '399006' }, interval_minutes: 30 },
+const MARKET_SOURCES: Array<{
+  name: string
+  source_type: string
+  config: Record<string, string>
+  interval_minutes: number
+}> = [
+  {
+    name: '大盘行情',
+    source_type: 'stock_news',
+    config: { symbol: '000001' },
+    interval_minutes: 30,
+  },
+  {
+    name: '创业板指',
+    source_type: 'stock_news',
+    config: { symbol: '399006' },
+    interval_minutes: 30,
+  },
   { name: '科创板', source_type: 'stock_news', config: { symbol: '000688' }, interval_minutes: 30 },
 ]
 
 export default function News() {
   const [sources, setSources] = useState<NewsSource[]>([])
   const [selectedStock, setSelectedStock] = useState<string>('')
-  const [stocks, setStocks] = useState<Array<{code: string, name: string}>>([])
+  const [stocks, setStocks] = useState<Array<{ code: string; name: string }>>([])
   const [loading, setLoading] = useState(true)
   const [newsLoading, setNewsLoading] = useState(false)
   const [news, setNews] = useState<NewsItem[]>([])
@@ -46,7 +67,7 @@ export default function News() {
     try {
       const res = await fetch('/api/stocks/watchlist')
       const data = await res.json()
-      setStocks(data.map((s: {code: string, name: string}) => ({ code: s.code, name: s.name })))
+      setStocks(data.map((s: { code: string; name: string }) => ({ code: s.code, name: s.name })))
     } catch (error) {
       console.error('Failed to fetch watchlist:', error)
     }
@@ -71,22 +92,22 @@ export default function News() {
   const initDefaultSources = async () => {
     const watchlistRes = await fetch('/api/stocks/watchlist')
     const watchlist = await watchlistRes.json()
-    
+
     const existingSymbols = new Set()
-    
+
     for (const src of MARKET_SOURCES) {
       try {
         await fetch('/api/news/sources', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(src)
+          body: JSON.stringify(src),
         })
         existingSymbols.add(src.config.symbol)
       } catch (e) {
         console.error('Failed to add market source:', e)
       }
     }
-    
+
     for (const stock of watchlist) {
       if (!existingSymbols.has(stock.code)) {
         try {
@@ -97,15 +118,15 @@ export default function News() {
               name: stock.name,
               source_type: 'stock_news',
               config: { symbol: stock.code },
-              interval_minutes: 60
-            })
+              interval_minutes: 60,
+            }),
           })
         } catch (e) {
           console.error('Failed to add watchlist source:', e)
         }
       }
     }
-    
+
     await fetchSources()
   }
 
@@ -133,11 +154,15 @@ export default function News() {
   }
 
   const getTypeIcon = (type: string) => {
-    switch(type) {
-      case 'stock_news': return <FileTextOutlined />
-      case 'stock_notices': return <DatabaseOutlined />
-      case 'macro_news': return <GlobalOutlined />
-      default: return <FileTextOutlined />
+    switch (type) {
+      case 'stock_news':
+        return <FileTextOutlined />
+      case 'stock_notices':
+        return <DatabaseOutlined />
+      case 'macro_news':
+        return <GlobalOutlined />
+      default:
+        return <FileTextOutlined />
     }
   }
 
@@ -145,12 +170,16 @@ export default function News() {
     {
       key: 'news',
       label: (
-        <span><FileTextOutlined /> 股票新闻</span>
+        <span>
+          <FileTextOutlined /> 股票新闻
+        </span>
       ),
       children: (
         <Card bordered={false} style={{ background: '#fafafa', borderRadius: 12 }}>
           {newsLoading ? (
-            <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Spin />
+            </div>
           ) : news.length === 0 ? (
             <Empty description="暂无新闻，请先选择股票或添加自选股" />
           ) : (
@@ -158,12 +187,22 @@ export default function News() {
               {news.map((item, idx) => (
                 <Card key={idx} size="small" style={{ borderRadius: 8 }}>
                   <Space direction="vertical" size={4} style={{ width: '100%' }}>
-                    <Text strong style={{ fontSize: 15 }}>{item.title}</Text>
-                    <Text type="secondary" style={{ fontSize: 12 }}>{item.summary}</Text>
+                    <Text strong style={{ fontSize: 15 }}>
+                      {item.title}
+                    </Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {item.summary}
+                    </Text>
                     <Space>
-                      <Text type="secondary" style={{ fontSize: 12 }}>{item.source}</Text>
-                      <Text type="secondary" style={{ fontSize: 12 }}>|</Text>
-                      <Text type="secondary" style={{ fontSize: 12 }}>{item.time}</Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {item.source}
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        |
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {item.time}
+                      </Text>
                     </Space>
                   </Space>
                 </Card>
@@ -171,73 +210,85 @@ export default function News() {
             </div>
           )}
         </Card>
-      )
+      ),
     },
     {
       key: 'notices',
       label: (
-        <span><DatabaseOutlined /> 股票公告</span>
+        <span>
+          <DatabaseOutlined /> 股票公告
+        </span>
       ),
       children: (
         <Card bordered={false} style={{ background: '#fafafa', borderRadius: 12 }}>
           <Empty description="请选择股票查看公告" />
         </Card>
-      )
+      ),
     },
     {
       key: 'macro',
       label: (
-        <span><GlobalOutlined /> 宏观资讯</span>
+        <span>
+          <GlobalOutlined /> 宏观资讯
+        </span>
       ),
       children: (
         <Card bordered={false} style={{ background: '#fafafa', borderRadius: 12 }}>
           <Empty description="宏观资讯功能开发中" />
         </Card>
-      )
-    }
+      ),
+    },
   ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <Card style={{ 
-        borderRadius: 16, 
-        border: 'none',
-        background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-        boxShadow: '0 8px 32px rgba(17, 153, 142, 0.3)'
-      }}>
+      <Card
+        style={{
+          borderRadius: 16,
+          border: 'none',
+          background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+          boxShadow: '0 8px 32px rgba(17, 153, 142, 0.3)',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{
-            width: 56,
-            height: 56,
-            borderRadius: 14,
-            background: 'rgba(255,255,255,0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 14,
+              background: 'rgba(255,255,255,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
             <FileTextOutlined style={{ fontSize: 28, color: '#fff' }} />
           </div>
           <div>
-            <Title level={3} style={{ margin: 0, color: '#fff' }}>资讯中心</Title>
-            <Text style={{ color: 'rgba(255,255,255,0.8)' }}>
-              聚合股票新闻、公告、宏观资讯
-            </Text>
+            <Title level={3} style={{ margin: 0, color: '#fff' }}>
+              资讯中心
+            </Title>
+            <Text style={{ color: 'rgba(255,255,255,0.8)' }}>聚合股票新闻、公告、宏观资讯</Text>
           </div>
         </div>
       </Card>
 
       <Card style={{ borderRadius: 16, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 16,
-            padding: '16px 20px',
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%)',
-            borderRadius: 12
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              padding: '16px 20px',
+              background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%)',
+              borderRadius: 12,
+            }}
+          >
             <StockOutlined style={{ fontSize: 18, color: '#11998e' }} />
-            <Text strong style={{ fontSize: 15 }}>选择股票查看资讯</Text>
+            <Text strong style={{ fontSize: 15 }}>
+              选择股票查看资讯
+            </Text>
             <Select
               style={{ width: 280 }}
               placeholder="选择自选股或输入股票代码"
@@ -248,13 +299,13 @@ export default function News() {
               options={[
                 ...MARKET_SOURCES.map(s => ({
                   value: s.config.symbol,
-                  label: s.name
+                  label: s.name,
                 })),
-                ...stocks.map(s => ({ value: s.code, label: `${s.name} (${s.code})` }))
+                ...stocks.map(s => ({ value: s.code, label: `${s.name} (${s.code})` })),
               ]}
             />
-            <Button 
-              icon={<ReloadOutlined />} 
+            <Button
+              icon={<ReloadOutlined />}
               onClick={() => selectedStock && fetchNews(selectedStock)}
               disabled={!selectedStock}
             >
@@ -262,11 +313,7 @@ export default function News() {
             </Button>
           </div>
 
-          <Tabs 
-            activeKey={tabKey} 
-            onChange={setTabKey}
-            items={tabItems}
-          />
+          <Tabs activeKey={tabKey} onChange={setTabKey} items={tabItems} />
         </Space>
       </Card>
     </div>

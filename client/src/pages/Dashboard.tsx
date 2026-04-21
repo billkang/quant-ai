@@ -1,8 +1,29 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { Card, Table, Statistic, Row, Col, Button, Typography, Space, Empty, Tag, Input, Popconfirm, message } from 'antd'
-import { PlusOutlined, StarOutlined, RiseOutlined, FallOutlined, DeleteOutlined, InfoCircleOutlined } from '@ant-design/icons'
+import {
+  Card,
+  Table,
+  Statistic,
+  Row,
+  Col,
+  Button,
+  Typography,
+  Space,
+  Empty,
+  Tag,
+  Input,
+  Popconfirm,
+  message,
+} from 'antd'
+import {
+  PlusOutlined,
+  StarOutlined,
+  RiseOutlined,
+  FallOutlined,
+  DeleteOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons'
 
 const { Title, Text } = Typography
 
@@ -65,7 +86,9 @@ export default function Dashboard() {
               {record.name}
             </Link>
           </Space>
-          <Text type="secondary" style={{ fontSize: 12, marginLeft: 22 }}>{record.code}</Text>
+          <Text type="secondary" style={{ fontSize: 12, marginLeft: 22 }}>
+            {record.code}
+          </Text>
         </Space>
       ),
     },
@@ -107,7 +130,7 @@ export default function Dashboard() {
       align: 'right' as const,
       width: '20%',
       render: (pct: number) => (
-        <Tag 
+        <Tag
           color={pct >= 0 ? 'red' : 'green'}
           style={{ borderRadius: 4, fontSize: 13, padding: '2px 8px' }}
         >
@@ -144,12 +167,14 @@ export default function Dashboard() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <Row gutter={[20, 20]}>
         <Col xs={24} sm={12} lg={8}>
-          <Card style={{ 
-            borderRadius: 16, 
-            border: 'none',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)'
-          }}>
+          <Card
+            style={{
+              borderRadius: 16,
+              border: 'none',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+            }}
+          >
             <Statistic
               title={<span style={{ color: 'rgba(255,255,255,0.8)' }}>自选股数量</span>}
               value={stocks.length}
@@ -160,12 +185,14 @@ export default function Dashboard() {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={8}>
-          <Card style={{ 
-            borderRadius: 16, 
-            border: 'none',
-            background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-            boxShadow: '0 8px 32px rgba(17, 153, 142, 0.3)'
-          }}>
+          <Card
+            style={{
+              borderRadius: 16,
+              border: 'none',
+              background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+              boxShadow: '0 8px 32px rgba(17, 153, 142, 0.3)',
+            }}
+          >
             <Statistic
               title={<span style={{ color: 'rgba(255,255,255,0.8)' }}>AI 助手</span>}
               value="就绪"
@@ -175,15 +202,21 @@ export default function Dashboard() {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={8}>
-          <Card style={{ 
-            borderRadius: 16, 
-            border: 'none',
-            background: 'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)',
-            boxShadow: '0 8px 32px rgba(238, 9, 121, 0.3)'
-          }}>
+          <Card
+            style={{
+              borderRadius: 16,
+              border: 'none',
+              background: 'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)',
+              boxShadow: '0 8px 32px rgba(238, 9, 121, 0.3)',
+            }}
+          >
             <Statistic
               title={<span style={{ color: 'rgba(255,255,255,0.8)' }}>今日涨跌幅</span>}
-              value={stocks.length > 0 ? stocks.reduce((sum, s) => sum + (s.changePercent || 0), 0) / stocks.length : 0}
+              value={
+                stocks.length > 0
+                  ? stocks.reduce((sum, s) => sum + (s.changePercent || 0), 0) / stocks.length
+                  : 0
+              }
               precision={2}
               suffix={<span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16 }}>%</span>}
               valueStyle={{ color: '#fff', fontSize: 42, fontWeight: 700 }}
@@ -194,14 +227,16 @@ export default function Dashboard() {
 
       <Card style={{ borderRadius: 16, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
         <Space direction="vertical" style={{ width: '100%' }} size="large">
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 16,
-            padding: '16px 20px',
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%)',
-            borderRadius: 12
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              padding: '16px 20px',
+              background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%)',
+              borderRadius: 12,
+            }}
+          >
             <Input
               placeholder="输入股票代码添加自选股 (如: 600519 或 00700.HK)"
               value={newCode}
@@ -210,13 +245,17 @@ export default function Dashboard() {
               size="large"
               style={{ flex: 1, borderRadius: 8 }}
             />
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />} 
-              onClick={addStock} 
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={addStock}
               disabled={!newCode}
               size="large"
-              style={{ borderRadius: 8, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none' }}
+              style={{
+                borderRadius: 8,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                border: 'none',
+              }}
             >
               添加股票
             </Button>
@@ -230,8 +269,8 @@ export default function Dashboard() {
           </div>
 
           {loading ? null : stocks.length === 0 ? (
-            <Empty 
-              description="暂无自选股，请在上方添加股票" 
+            <Empty
+              description="暂无自选股，请在上方添加股票"
               image={Empty.PRESENTED_IMAGE_SIMPLE}
             />
           ) : (
@@ -240,14 +279,14 @@ export default function Dashboard() {
               dataSource={stocks}
               rowKey="code"
               pagination={false}
-              onRow={(record) => ({
+              onRow={record => ({
                 onClick: () => navigate(`/stock/${record.code}`),
-                style: { cursor: 'pointer' }
+                style: { cursor: 'pointer' },
               })}
               locale={{ emptyText: '暂无自选股' }}
-              style={{ 
+              style={{
                 borderRadius: 12,
-                overflow: 'hidden'
+                overflow: 'hidden',
               }}
             />
           )}

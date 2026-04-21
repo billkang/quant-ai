@@ -32,10 +32,11 @@ def remove_from_watchlist(db: Session, stock_code: str) -> bool:
 
 
 def save_stock_kline(db: Session, stock_code: str, period: str, data: list) -> models.StockKline:
-    existing = db.query(models.StockKline).filter(
-        models.StockKline.stock_code == stock_code,
-        models.StockKline.period == period
-    ).first()
+    existing = (
+        db.query(models.StockKline)
+        .filter(models.StockKline.stock_code == stock_code, models.StockKline.period == period)
+        .first()
+    )
     if existing:
         existing.data = data
         existing.updated_at = datetime.utcnow()
@@ -49,10 +50,11 @@ def save_stock_kline(db: Session, stock_code: str, period: str, data: list) -> m
 
 
 def get_stock_kline(db: Session, stock_code: str, period: str) -> models.StockKline | None:
-    return db.query(models.StockKline).filter(
-        models.StockKline.stock_code == stock_code,
-        models.StockKline.period == period
-    ).first()
+    return (
+        db.query(models.StockKline)
+        .filter(models.StockKline.stock_code == stock_code, models.StockKline.period == period)
+        .first()
+    )
 
 
 def get_positions(db: Session) -> list[models.Position]:
@@ -68,13 +70,15 @@ def delete_position(db: Session, stock_code: str) -> bool:
     return False
 
 
-def add_position(db: Session, stock_code: str, stock_name: str, quantity: int, cost_price: float, buy_date) -> models.Position:
+def add_position(
+    db: Session, stock_code: str, stock_name: str, quantity: int, cost_price: float, buy_date
+) -> models.Position:
     position = models.Position(
         stock_code=stock_code,
         stock_name=stock_name,
         quantity=quantity,
         cost_price=cost_price,
-        buy_date=buy_date
+        buy_date=buy_date,
     )
     db.add(position)
     db.commit()
@@ -83,10 +87,24 @@ def add_position(db: Session, stock_code: str, stock_name: str, quantity: int, c
 
 
 def get_transactions(db: Session, limit: int = 50) -> list[models.Transaction]:
-    return db.query(models.Transaction).order_by(models.Transaction.trade_date.desc()).limit(limit).all()
+    return (
+        db.query(models.Transaction)
+        .order_by(models.Transaction.trade_date.desc())
+        .limit(limit)
+        .all()
+    )
 
 
-def add_transaction(db: Session, stock_code: str, stock_name: str, trans_type: str, quantity: int, price: float, commission: float, trade_date) -> models.Transaction:
+def add_transaction(
+    db: Session,
+    stock_code: str,
+    stock_name: str,
+    trans_type: str,
+    quantity: int,
+    price: float,
+    commission: float,
+    trade_date,
+) -> models.Transaction:
     transaction = models.Transaction(
         stock_code=stock_code,
         stock_name=stock_name,
@@ -94,7 +112,7 @@ def add_transaction(db: Session, stock_code: str, stock_name: str, trans_type: s
         quantity=quantity,
         price=price,
         commission=commission,
-        trade_date=trade_date
+        trade_date=trade_date,
     )
     db.add(transaction)
     db.commit()
@@ -106,12 +124,11 @@ def get_news_sources(db: Session) -> list[models.NewsSource]:
     return db.query(models.NewsSource).all()
 
 
-def add_news_source(db: Session, name: str, source_type: str, config: dict, interval_minutes: int = 60) -> models.NewsSource:
+def add_news_source(
+    db: Session, name: str, source_type: str, config: dict, interval_minutes: int = 60
+) -> models.NewsSource:
     source = models.NewsSource(
-        name=name,
-        source_type=source_type,
-        config=config,
-        interval_minutes=interval_minutes
+        name=name, source_type=source_type, config=config, interval_minutes=interval_minutes
     )
     db.add(source)
     db.commit()
@@ -119,7 +136,15 @@ def add_news_source(db: Session, name: str, source_type: str, config: dict, inte
     return source
 
 
-def update_news_source(db: Session, source_id: int, name: str = None, source_type: str = None, config: dict = None, interval_minutes: int = None, enabled: bool = None) -> models.NewsSource | None:
+def update_news_source(
+    db: Session,
+    source_id: int,
+    name: str = None,
+    source_type: str = None,
+    config: dict = None,
+    interval_minutes: int = None,
+    enabled: bool = None,
+) -> models.NewsSource | None:
     source = db.query(models.NewsSource).filter(models.NewsSource.id == source_id).first()
     if not source:
         return None
@@ -147,7 +172,9 @@ def delete_news_source(db: Session, source_id: int) -> bool:
     return False
 
 
-def get_news_articles(db: Session, source_id: int = None, symbol: str = None, limit: int = 50) -> list[models.NewsArticle]:
+def get_news_articles(
+    db: Session, source_id: int = None, symbol: str = None, limit: int = 50
+) -> list[models.NewsArticle]:
     query = db.query(models.NewsArticle)
     if source_id:
         query = query.filter(models.NewsArticle.source_id == source_id)
@@ -162,7 +189,16 @@ def article_url_exists(db: Session, url: str) -> bool:
     return db.query(models.NewsArticle).filter(models.NewsArticle.url == url).first() is not None
 
 
-def save_news_article(db: Session, source_id: int, title: str, summary: str, source: str, publish_time: datetime, url: str, content: str = None) -> models.NewsArticle:
+def save_news_article(
+    db: Session,
+    source_id: int,
+    title: str,
+    summary: str,
+    source: str,
+    publish_time: datetime,
+    url: str,
+    content: str = None,
+) -> models.NewsArticle:
     article = models.NewsArticle(
         source_id=source_id,
         title=title,
@@ -170,7 +206,7 @@ def save_news_article(db: Session, source_id: int, title: str, summary: str, sou
         content=content,
         source=source,
         publish_time=publish_time,
-        url=url
+        url=url,
     )
     db.add(article)
     db.commit()
@@ -226,9 +262,7 @@ def get_diagnostic_history(
     return query.order_by(models.DiagnosticHistory.created_at.desc()).limit(limit).all()
 
 
-def get_diagnostic_history_by_id(
-    db: Session, history_id: int
-) -> models.DiagnosticHistory | None:
-    return db.query(models.DiagnosticHistory).filter(
-        models.DiagnosticHistory.id == history_id
-    ).first()
+def get_diagnostic_history_by_id(db: Session, history_id: int) -> models.DiagnosticHistory | None:
+    return (
+        db.query(models.DiagnosticHistory).filter(models.DiagnosticHistory.id == history_id).first()
+    )

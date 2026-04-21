@@ -1,5 +1,6 @@
-import requests
 from datetime import datetime
+
+import requests
 
 from src.core.config import settings
 
@@ -25,26 +26,37 @@ class StockDataService:
             if self._spot_cache is None or now - self._cache_time > self.CACHE_TTL:
                 resp = requests.get(
                     "https://push2.eastmoney.com/api/qt/clist/get",
-                    params={"pn": 1, "pz": 5000, "po": 1, "np": 1, "ut": "bd1d9ddb04089700cf9c27f6f7426281", "fltt": 2, "invt": 2, "fid": "f3", "fs": "m:0+t:6,m:0+t:80", "fields": "f1,f2,f3,f4,f5,f6,f7,f12,f13,f14"},
-                    timeout=5
+                    params={
+                        "pn": 1,
+                        "pz": 5000,
+                        "po": 1,
+                        "np": 1,
+                        "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+                        "fltt": 2,
+                        "invt": 2,
+                        "fid": "f3",
+                        "fs": "m:0+t:6,m:0+t:80",
+                        "fields": "f1,f2,f3,f4,f5,f6,f7,f12,f13,f14",
+                    },
+                    timeout=5,
                 )
                 data = resp.json()
-                self._spot_cache = {s['f12']: s for s in data.get('data', {}).get('diff', [])}
+                self._spot_cache = {s["f12"]: s for s in data.get("data", {}).get("diff", [])}
                 self._cache_time = now
             stock = self._spot_cache.get(symbol)
             if not stock:
                 return None
             return {
-                'code': symbol,
-                'name': stock.get('f14', ''),
-                'price': stock.get('f2', 0) or 0,
-                'change': stock.get('f4', 0) or 0,
-                'changePercent': stock.get('f3', 0) or 0,
-                'volume': stock.get('f5', 0) or 0,
-                'amount': stock.get('f6', 0) or 0,
-                'high': stock.get('f15', 0) or 0,
-                'low': stock.get('f16', 0) or 0,
-                'open': stock.get('f17', 0) or 0,
+                "code": symbol,
+                "name": stock.get("f14", ""),
+                "price": stock.get("f2", 0) or 0,
+                "change": stock.get("f4", 0) or 0,
+                "changePercent": stock.get("f3", 0) or 0,
+                "volume": stock.get("f5", 0) or 0,
+                "amount": stock.get("f6", 0) or 0,
+                "high": stock.get("f15", 0) or 0,
+                "low": stock.get("f16", 0) or 0,
+                "open": stock.get("f17", 0) or 0,
             }
         except Exception as e:
             print(f"Error fetching A stock quote: {e}")
@@ -52,42 +64,42 @@ class StockDataService:
 
     def get_hk_stock_quote(self, symbol: str) -> dict | None:
         try:
-            code = symbol.replace('.HK', '').replace('.US', '')
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-            yahoo_symbol = f"{code}.HK" if '.HK' in symbol.upper() else f"{code}"
+            code = symbol.replace(".HK", "").replace(".US", "")
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+            yahoo_symbol = f"{code}.HK" if ".HK" in symbol.upper() else f"{code}"
             resp = requests.get(
                 f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}",
                 headers=headers,
                 proxies=PROXY,
-                timeout=10
+                timeout=10,
             )
             if resp.status_code == 429:
                 print(f"Yahoo rate limited for {symbol}")
                 return None
             data = resp.json()
-            result = data.get('chart', {}).get('result', [])
+            result = data.get("chart", {}).get("result", [])
             if not result:
                 return None
-            meta = result[0].get('meta', {})
+            meta = result[0].get("meta", {})
             return {
-                'code': symbol,
-                'name': meta.get('shortName', meta.get('symbol', '')),
-                'price': meta.get('previousClose', 0),
-                'change': meta.get('regularMarketChange', 0) or 0,
-                'changePercent': meta.get('regularMarketChangePercent', 0) or 0,
-                'volume': meta.get('volume', 0) or 0,
-                'high': meta.get('chartPreviousClose', 0) or 0,
-                'low': meta.get('chartPreviousClose', 0) or 0,
-                'open': meta.get('chartPreviousClose', 0) or 0,
+                "code": symbol,
+                "name": meta.get("shortName", meta.get("symbol", "")),
+                "price": meta.get("previousClose", 0),
+                "change": meta.get("regularMarketChange", 0) or 0,
+                "changePercent": meta.get("regularMarketChangePercent", 0) or 0,
+                "volume": meta.get("volume", 0) or 0,
+                "high": meta.get("chartPreviousClose", 0) or 0,
+                "low": meta.get("chartPreviousClose", 0) or 0,
+                "open": meta.get("chartPreviousClose", 0) or 0,
             }
         except Exception as e:
             print(f"Error fetching {symbol} quote: {e}")
             return None
 
-    def get_a_stock_kline(self, symbol: str, period: str = 'daily') -> list:
+    def get_a_stock_kline(self, symbol: str, period: str = "daily") -> list:
         try:
-            period_map = {'daily': '101', 'weekly': '102', 'monthly': '103'}
-            p = period_map.get(period, '101')
+            period_map = {"daily": "101", "weekly": "102", "monthly": "103"}
+            p = period_map.get(period, "101")
             resp = requests.get(
                 "https://push2his.eastmoney.com/api/qt/stock/kline/get",
                 params={
@@ -99,59 +111,70 @@ class StockDataService:
                     "end": "20500101",
                     "lmt": 100,
                 },
-                timeout=5
+                timeout=5,
             )
             data = resp.json()
             klines = []
-            for d in data.get('data', {}).get('klines', []):
-                parts = d.split(',')
-                klines.append({
-                    'date': parts[0],
-                    'open': float(parts[1]),
-                    'close': float(parts[2]),
-                    'high': float(parts[3]),
-                    'low': float(parts[4]),
-                    'volume': int(parts[5]),
-                    'amount': int(parts[6]) if len(parts) > 6 else 0,
-                })
+            for d in data.get("data", {}).get("klines", []):
+                parts = d.split(",")
+                klines.append(
+                    {
+                        "date": parts[0],
+                        "open": float(parts[1]),
+                        "close": float(parts[2]),
+                        "high": float(parts[3]),
+                        "low": float(parts[4]),
+                        "volume": int(parts[5]),
+                        "amount": int(parts[6]) if len(parts) > 6 else 0,
+                    }
+                )
             return klines
         except Exception as e:
             print(f"Error fetching A stock kline: {e}")
             return []
 
-    def get_hk_stock_kline(self, symbol: str, period: str = '1y') -> list:
+    def get_hk_stock_kline(self, symbol: str, period: str = "1y") -> list:
         try:
-            code = symbol.replace('.HK', '').replace('.US', '')
-            period_map = {'1d': '1d', '1mo': '1mo', '3mo': '3mo', '6mo': '6mo', '1y': '1y'}
-            p = period_map.get(period, '1y')
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-            yahoo_symbol = f"{code}.HK" if '.HK' in symbol.upper() else f"{code}.US" if '.US' in symbol.upper() else code
+            code = symbol.replace(".HK", "").replace(".US", "")
+            period_map = {"1d": "1d", "1mo": "1mo", "3mo": "3mo", "6mo": "6mo", "1y": "1y"}
+            p = period_map.get(period, "1y")
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+            yahoo_symbol = (
+                f"{code}.HK"
+                if ".HK" in symbol.upper()
+                else f"{code}.US"
+                if ".US" in symbol.upper()
+                else code
+            )
             resp = requests.get(
                 f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}",
                 params={"range": p, "interval": "1d"},
                 headers=headers,
                 proxies=PROXY,
-                timeout=10
+                timeout=10,
             )
             if resp.status_code == 429:
                 return []
             data = resp.json()
-            result = data.get('chart', {}).get('result', [])
+            result = data.get("chart", {}).get("result", [])
             if not result:
                 return []
-            quote = result[0].get('indicators', {}).get('quote', [{}])[0]
-            timestamps = result[0].get('timestamp', [])
+            quote = result[0].get("indicators", {}).get("quote", [{}])[0]
+            timestamps = result[0].get("timestamp", [])
             klines = []
             for i, ts in enumerate(timestamps):
                 from datetime import datetime
-                klines.append({
-                    'date': datetime.fromtimestamp(ts).strftime('%Y-%m-%d'),
-                    'open': quote['open'][i] if quote.get('open') else 0,
-                    'close': quote['close'][i] if quote.get('close') else 0,
-                    'high': quote['high'][i] if quote.get('high') else 0,
-                    'low': quote['low'][i] if quote.get('low') else 0,
-                    'volume': quote['volume'][i] if quote.get('volume') else 0,
-                })
+
+                klines.append(
+                    {
+                        "date": datetime.fromtimestamp(ts).strftime("%Y-%m-%d"),
+                        "open": quote["open"][i] if quote.get("open") else 0,
+                        "close": quote["close"][i] if quote.get("close") else 0,
+                        "high": quote["high"][i] if quote.get("high") else 0,
+                        "low": quote["low"][i] if quote.get("low") else 0,
+                        "volume": quote["volume"][i] if quote.get("volume") else 0,
+                    }
+                )
             return klines
         except Exception as e:
             print(f"Error fetching {symbol} kline: {e}")
