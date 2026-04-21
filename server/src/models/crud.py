@@ -221,13 +221,6 @@ def update_news_source_fetch_time(db: Session, source_id: int) -> None:
         db.commit()
 
 
-def update_fetch_time(db: Session, source_id: int) -> None:
-    source = db.query(models.NewsSource).filter(models.NewsSource.id == source_id).first()
-    if source:
-        source.last_fetched_at = datetime.utcnow()
-        db.commit()
-
-
 def save_diagnostic_history(
     db: Session,
     stock_code: str,

@@ -2,12 +2,16 @@
 __pycache__/
 *.py[cod]
 *.so
-.venv/
 *.egg-info/
+
+# Conda (not venv - we use conda + uv)
+# .conda/ is usually in ~/.conda, no need to ignore here
 
 # Server
 .env
 .ruff_cache/
+.pytest_cache/
+.mypy_cache/
 *.db
 
 # Client
