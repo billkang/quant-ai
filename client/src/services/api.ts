@@ -28,4 +28,19 @@ export const portfolioApi = {
   addPosition: (data: unknown) => api.post('/portfolio', data),
 }
 
+export const quantApi = {
+  getIndicators: (code: string) => api.get(`/quant/indicators/${code}`),
+  getIndicatorHistory: (code: string, limit = 60) =>
+    api.get(`/quant/indicators/${code}/history`, { params: { limit } }),
+  getFundamentals: (code: string) => api.get(`/quant/fundamentals/${code}`),
+  runBacktest: (data: unknown) => api.post('/quant/backtest', data),
+  getBacktests: (limit = 50) => api.get('/quant/backtests', { params: { limit } }),
+  getBacktestDetail: (id: number) => api.get(`/quant/backtests/${id}`),
+  getPortfolioAnalysis: () => api.get('/quant/portfolio/analysis'),
+  getAlerts: (isRead?: boolean, limit = 50) =>
+    api.get('/quant/alerts', { params: { is_read: isRead, limit } }),
+  createAlertRule: (data: unknown) => api.post('/quant/alerts/rules', data),
+  markAlertRead: (id: number) => api.put(`/quant/alerts/${id}/read`),
+}
+
 export default api

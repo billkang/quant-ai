@@ -1,6 +1,15 @@
+import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { Menu, Typography } from 'antd'
-import { LineChartOutlined, FileTextOutlined, FundOutlined, RobotOutlined } from '@ant-design/icons'
+import { Menu, Typography, Badge } from 'antd'
+import {
+  LineChartOutlined,
+  FileTextOutlined,
+  FundOutlined,
+  RobotOutlined,
+  BarChartOutlined,
+  BellOutlined,
+} from '@ant-design/icons'
+import { quantApi } from '../services/api'
 
 const { Title, Text } = Typography
 
@@ -37,10 +46,33 @@ const menuItems = [
       </Link>
     ),
   },
+  {
+    key: '/backtest',
+    label: (
+      <Link to="/backtest">
+        <BarChartOutlined /> 策略回测
+      </Link>
+    ),
+  },
 ]
 
 export default function Layout() {
   const location = useLocation()
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await quantApi.getAlerts(false, 1)
+        setUnreadCount(res.data?.data?.length || 0)
+      } catch (e) {
+        console.error(e)
+      }
+    }
+    fetchUnread()
+    const interval = setInterval(fetchUnread, 60000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div
@@ -90,19 +122,26 @@ export default function Layout() {
                 </Text>
               </div>
             </div>
-            <Menu
-              mode="horizontal"
-              selectedKeys={[location.pathname]}
-              items={menuItems}
-              style={{
-                flex: 1,
-                border: 'none',
-                background: 'transparent',
-                justifyContent: 'flex-end',
-                marginRight: -16,
-              }}
-              theme="dark"
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <Menu
+                mode="horizontal"
+                selectedKeys={[location.pathname]}
+                items={menuItems}
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  background: 'transparent',
+                  justifyContent: 'flex-end',
+                  marginRight: -16,
+                }}
+                theme="dark"
+              />
+              <Link to="/alerts" style={{ color: 'rgba(255,255,255,0.65)', padding: '0 16px' }}>
+                <Badge count={unreadCount} size="small">
+                  <BellOutlined style={{ fontSize: 18 }} />
+                </Badge>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

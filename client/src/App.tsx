@@ -7,6 +7,8 @@ import StockDetail from './pages/StockDetail'
 import News from './pages/News'
 import AIAdvice from './pages/AIAdvice'
 import Portfolio from './pages/Portfolio'
+import Backtest from './pages/Backtest'
+import Alerts from './pages/Alerts'
 
 function App() {
   return (
@@ -28,6 +30,8 @@ function App() {
             <Route path="news" element={<News />} />
             <Route path="ai-advice" element={<AIAdvice />} />
             <Route path="portfolio" element={<Portfolio />} />
+            <Route path="backtest" element={<Backtest />} />
+            <Route path="alerts" element={<Alerts />} />
           </Route>
         </Routes>
       </BrowserRouter>

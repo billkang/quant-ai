@@ -99,3 +99,101 @@ class DiagnosticHistory(Base):
     final_report = Column(String)
     score = Column(String(10))
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class StockDailyPrice(Base):
+    __tablename__ = "stock_daily_prices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    stock_code = Column(String(20), index=True, nullable=False)
+    trade_date = Column(DateTime, nullable=False)
+    open = Column(Float)
+    high = Column(Float)
+    low = Column(Float)
+    close = Column(Float)
+    volume = Column(Integer)
+    amount = Column(Float)
+    is_suspended = Column(Integer, default=0)
+    adjusted = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class StockIndicator(Base):
+    __tablename__ = "stock_indicators"
+
+    id = Column(Integer, primary_key=True, index=True)
+    stock_code = Column(String(20), index=True, nullable=False)
+    trade_date = Column(DateTime, nullable=False)
+    ma5 = Column(Float)
+    ma10 = Column(Float)
+    ma20 = Column(Float)
+    ma60 = Column(Float)
+    rsi6 = Column(Float)
+    rsi12 = Column(Float)
+    rsi24 = Column(Float)
+    macd_dif = Column(Float)
+    macd_dea = Column(Float)
+    macd_bar = Column(Float)
+    kdj_k = Column(Float)
+    kdj_d = Column(Float)
+    kdj_j = Column(Float)
+    boll_upper = Column(Float)
+    boll_mid = Column(Float)
+    boll_lower = Column(Float)
+    vol_ma5 = Column(Float)
+    vol_ma10 = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class StockFundamental(Base):
+    __tablename__ = "stock_fundamentals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    stock_code = Column(String(20), index=True, nullable=False)
+    report_date = Column(DateTime, nullable=False)
+    pe_ttm = Column(Float)
+    pb = Column(Float)
+    ps = Column(Float)
+    roe = Column(Float)
+    roa = Column(Float)
+    gross_margin = Column(Float)
+    net_margin = Column(Float)
+    revenue_growth = Column(Float)
+    profit_growth = Column(Float)
+    debt_ratio = Column(Float)
+    free_cash_flow = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class StrategyBacktest(Base):
+    __tablename__ = "strategy_backtests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    strategy_name = Column(String(100), nullable=False)
+    stock_code = Column(String(20), nullable=False)
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=False)
+    initial_cash = Column(Float)
+    final_value = Column(Float)
+    total_return = Column(Float)
+    annualized_return = Column(Float)
+    max_drawdown = Column(Float)
+    sharpe_ratio = Column(Float)
+    win_rate = Column(Float)
+    trade_count = Column(Integer)
+    trades = Column(JSON)
+    equity_curve = Column(JSON)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    stock_code = Column(String(20), nullable=False)
+    alert_type = Column(String(50), nullable=False)
+    condition = Column(String(200))
+    triggered_at = Column(DateTime, nullable=True)
+    message = Column(String)
+    is_read = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)

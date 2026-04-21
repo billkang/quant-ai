@@ -17,12 +17,18 @@ docker-compose logs -f client
 # Frontend
 cd client && pnpm run dev    # Dev server at localhost:5173
 cd client && pnpm run lint # Lint check
+cd client && pnpm run test   # Run vitest
 
 # Backend (requires PostgreSQL + Redis)
 cd server && PYTHONPATH=. uvicorn src.main:app --reload
 
 # Database migrations
 docker-compose exec server alembic upgrade head
+
+# Data Pipeline (Scheduler jobs run automatically in Docker)
+# Manual trigger via API:
+curl http://localhost:8000/api/quant/portfolio/analysis
+curl http://localhost:8000/api/quant/alerts
 ```
 
 ## Architecture
@@ -59,6 +65,10 @@ docker-compose up -d --build
 
 - `docker-compose.yml` - Orchestration
 - `server/src/main.py` - API routes
+- `server/src/api/quant.py` - Quantitative analysis APIs (indicators, backtest, portfolio analysis, alerts)
 - `server/src/models/` - Database models
+- `server/src/services/indicator.py` - Technical indicator calculations
+- `server/src/services/backtest_service.py` - Strategy backtest engine
+- `server/src/services/scheduler.py` - Data pipeline scheduler
 - `client/src/pages/` - Page components
 - `client/src/components/Layout.tsx` - Main layout

@@ -259,3 +259,209 @@ def get_diagnostic_history_by_id(db: Session, history_id: int) -> models.Diagnos
     return (
         db.query(models.DiagnosticHistory).filter(models.DiagnosticHistory.id == history_id).first()
     )
+
+
+# ---- Stock Daily Prices ----
+
+
+def save_daily_price(
+    db: Session,
+    stock_code: str,
+    trade_date,
+    open_price,
+    high,
+    low,
+    close,
+    volume,
+    amount,
+    is_suspended=False,
+    adjusted=True,
+):
+    existing = (
+        db.query(models.StockDailyPrice)
+        .filter(
+            models.StockDailyPrice.stock_code == stock_code,
+            models.StockDailyPrice.trade_date == trade_date,
+        )
+        .first()
+    )
+    if existing:
+        existing.open = open_price
+        existing.high = high
+        existing.low = low
+        existing.close = close
+        existing.volume = volume
+        existing.amount = amount
+        existing.is_suspended = 1 if is_suspended else 0
+        existing.adjusted = 1 if adjusted else 0
+        db.commit()
+        return existing
+    price = models.StockDailyPrice(
+        stock_code=stock_code,
+        trade_date=trade_date,
+        open=open_price,
+        high=high,
+        low=low,
+        close=close,
+        volume=volume,
+        amount=amount,
+        is_suspended=1 if is_suspended else 0,
+        adjusted=1 if adjusted else 0,
+    )
+    db.add(price)
+    db.commit()
+    db.refresh(price)
+    return price
+
+
+def get_daily_prices(db: Session, stock_code: str, limit: int = 60):
+    return (
+        db.query(models.StockDailyPrice)
+        .filter(models.StockDailyPrice.stock_code == stock_code)
+        .order_by(models.StockDailyPrice.trade_date.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+# ---- Stock Indicators ----
+
+
+def save_indicator(db: Session, stock_code: str, trade_date, **kwargs):
+    existing = (
+        db.query(models.StockIndicator)
+        .filter(
+            models.StockIndicator.stock_code == stock_code,
+            models.StockIndicator.trade_date == trade_date,
+        )
+        .first()
+    )
+    if existing:
+        for key, value in kwargs.items():
+            if hasattr(existing, key):
+                setattr(existing, key, value)
+        db.commit()
+        return existing
+    indicator = models.StockIndicator(stock_code=stock_code, trade_date=trade_date, **kwargs)
+    db.add(indicator)
+    db.commit()
+    db.refresh(indicator)
+    return indicator
+
+
+def get_latest_indicator(db: Session, stock_code: str):
+    return (
+        db.query(models.StockIndicator)
+        .filter(models.StockIndicator.stock_code == stock_code)
+        .order_by(models.StockIndicator.trade_date.desc())
+        .first()
+    )
+
+
+def get_indicator_history(db: Session, stock_code: str, limit: int = 60):
+    return (
+        db.query(models.StockIndicator)
+        .filter(models.StockIndicator.stock_code == stock_code)
+        .order_by(models.StockIndicator.trade_date.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+# ---- Stock Fundamentals ----
+
+
+def save_fundamental(db: Session, stock_code: str, report_date, **kwargs):
+    existing = (
+        db.query(models.StockFundamental)
+        .filter(
+            models.StockFundamental.stock_code == stock_code,
+            models.StockFundamental.report_date == report_date,
+        )
+        .first()
+    )
+    if existing:
+        for key, value in kwargs.items():
+            if hasattr(existing, key):
+                setattr(existing, key, value)
+        db.commit()
+        return existing
+    fundamental = models.StockFundamental(stock_code=stock_code, report_date=report_date, **kwargs)
+    db.add(fundamental)
+    db.commit()
+    db.refresh(fundamental)
+    return fundamental
+
+
+def get_latest_fundamental(db: Session, stock_code: str):
+    return (
+        db.query(models.StockFundamental)
+        .filter(models.StockFundamental.stock_code == stock_code)
+        .order_by(models.StockFundamental.report_date.desc())
+        .first()
+    )
+
+
+# ---- Strategy Backtests ----
+
+
+def save_backtest(db: Session, **kwargs) -> models.StrategyBacktest:
+    backtest = models.StrategyBacktest(**kwargs)
+    db.add(backtest)
+    db.commit()
+    db.refresh(backtest)
+    return backtest
+
+
+def get_backtests(db: Session, limit: int = 50):
+    return (
+        db.query(models.StrategyBacktest)
+        .order_by(models.StrategyBacktest.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def get_backtest_by_id(db: Session, backtest_id: int):
+    return (
+        db.query(models.StrategyBacktest).filter(models.StrategyBacktest.id == backtest_id).first()
+    )
+
+
+# ---- Alerts ----
+
+
+def save_alert(
+    db: Session, stock_code: str, alert_type: str, condition: str, message: str, triggered_at=None
+):
+    alert = models.Alert(
+        stock_code=stock_code,
+        alert_type=alert_type,
+        condition=condition,
+        message=message,
+        triggered_at=triggered_at,
+    )
+    db.add(alert)
+    db.commit()
+    db.refresh(alert)
+    return alert
+
+
+def get_alerts(db: Session, is_read=None, limit: int = 50):
+    query = db.query(models.Alert)
+    if is_read is not None:
+        query = query.filter(models.Alert.is_read == (1 if is_read else 0))
+    return query.order_by(models.Alert.created_at.desc()).limit(limit).all()
+
+
+def mark_alert_read(db: Session, alert_id: int):
+    alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+    if alert:
+        alert.is_read = 1
+        db.commit()
+        return True
+    return False
+
+
+def get_unread_alert_count(db: Session):
+    return db.query(models.Alert).filter(models.Alert.is_read == 0).count()

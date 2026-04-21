@@ -10,6 +10,8 @@ from src.core.config import settings
 class DiagnosticState(TypedDict):
     stock_code: str
     stock_data: dict
+    indicators: dict
+    fundamentals: dict
     news: list
     fundamental_analysis: str
     technical_analysis: str
@@ -58,19 +60,31 @@ class AIDiagnosticService:
         return workflow.compile()
 
     def fetch_data_node(self, state: DiagnosticState) -> dict:
-        return {"stock_data": state.get("stock_data", {}), "news": state.get("news", [])}
+        return {
+            "stock_data": state.get("stock_data", {}),
+            "indicators": state.get("indicators", {}),
+            "fundamentals": state.get("fundamentals", {}),
+            "news": state.get("news", []),
+        }
 
     def fundamental_node(self, state: DiagnosticState) -> dict:
         stock = state.get("stock_data", {})
+        fundamentals = state.get("fundamentals", {})
         prompt = f"""请分析 {stock.get("name")} ({stock.get("code")}) 的基本面:
 
 - 当前价格: {stock.get("price")}
 - 涨跌: {stock.get("change", 0)} ({stock.get("changePercent", 0)}%)
+- PE(TTM): {fundamentals.get("pe_ttm", "N/A")}
+- PB: {fundamentals.get("pb", "N/A")}
+- ROE: {fundamentals.get("roe", "N/A")}%
+- 毛利率: {fundamentals.get("gross_margin", "N/A")}%
+- 营收增速: {fundamentals.get("revenue_growth", "N/A")}%
+- 负债率: {fundamentals.get("debt_ratio", "N/A")}%
 
 请从以下角度分析:
 1. 公司概况及行业地位
 2. 营收和利润趋势
-3. 估值分析 (市盈率、市净率)
+3. 估值分析 (PE/PB/ROE水平)
 4. 基本面优劣势
 
 请用简洁的中文回答。"""
@@ -83,14 +97,46 @@ class AIDiagnosticService:
 
     def technical_node(self, state: DiagnosticState) -> dict:
         stock = state.get("stock_data", {})
+        indicators = state.get("indicators", {})
+        ma5 = indicators.get("ma5")
+        ma20 = indicators.get("ma20")
+        rsi6 = indicators.get("rsi6")
+        macd_dif = indicators.get("macd_dif")
+        macd_dea = indicators.get("macd_dea")
+        boll_upper = indicators.get("boll_upper")
+        boll_lower = indicators.get("boll_lower")
+
+        trend = "上行" if ma5 and ma20 and ma5 > ma20 else "下行" if ma5 and ma20 else "未知"
+        rsi_status = "超买" if rsi6 and rsi6 > 70 else "超卖" if rsi6 and rsi6 < 30 else "中性"
+        macd_signal = (
+            "金叉"
+            if macd_dif and macd_dea and macd_dif > macd_dea
+            else "死叉"
+            if macd_dif and macd_dea
+            else "中性"
+        )
+        price = stock.get("price", 0)
+        boll_position = "中轨附近"
+        if boll_upper and boll_lower and price:
+            if price > boll_upper:
+                boll_position = "上轨之上 (超买区)"
+            elif price < boll_lower:
+                boll_position = "下轨之下 (超卖区)"
+            else:
+                boll_position = "布林带内"
+
         prompt = f"""请分析 {stock.get("name")} ({stock.get("code")}) 的技术面:
 
-- 当前价格: {stock.get("price")}
+- 当前价格: {price}
 - 涨跌幅: {stock.get("changePercent", 0)}%
+- MA5: {ma5} | MA20: {ma20} (趋势: {trend})
+- RSI(6): {rsi6} (状态: {rsi_status})
+- MACD: DIF={macd_dif}, DEA={macd_dea} (信号: {macd_signal})
+- 布林带: 股价位于{boll_position}
 
 请从以下角度分析:
-1. 短期趋势 (5日、10日均线)
-2. 技术指标 (MACD、RSI)
+1. 短期趋势 (MA5/MA20关系)
+2. 技术指标 (MACD/RSI状态)
 3. 支撑位和压力位
 4. 技术面建议
 
@@ -152,7 +198,14 @@ class AIDiagnosticService:
         except Exception as e:
             return {"final_report": f"综合分析失败: {str(e)}"}
 
-    def analyze(self, stock_code: str, stock_data: dict, news: list = None) -> dict:
+    def analyze(
+        self,
+        stock_code: str,
+        stock_data: dict,
+        indicators: dict = None,
+        fundamentals: dict = None,
+        news: list = None,
+    ) -> dict:
         if news is None:
             news = []
         if not self.api_key:
@@ -168,6 +221,8 @@ class AIDiagnosticService:
             initial_state = {
                 "stock_code": stock_code,
                 "stock_data": stock_data,
+                "indicators": indicators or {},
+                "fundamentals": fundamentals or {},
                 "news": news,
                 "fundamental_analysis": "",
                 "technical_analysis": "",

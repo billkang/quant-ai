@@ -5,7 +5,7 @@ from alembic.config import Config as AlembicConfig
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api import ai, news, portfolio, stocks
+from src.api import ai, news, portfolio, quant, stocks
 from src.core.config import settings
 from src.core.middleware import RateLimitMiddleware
 from src.services.scheduler import scheduler_service
@@ -47,6 +47,7 @@ app.include_router(stocks.router, prefix="/api")
 app.include_router(news.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(portfolio.router, prefix="/api")
+app.include_router(quant.router, prefix="/api")
 
 
 @app.get("/api/health")

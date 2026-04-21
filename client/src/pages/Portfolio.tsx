@@ -24,7 +24,10 @@ import {
   DollarOutlined,
   RiseOutlined,
   FallOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons'
+import ReactECharts from 'echarts-for-react'
+import { quantApi } from '../services/api'
 
 const { Title, Text } = Typography
 
@@ -36,6 +39,14 @@ interface Position {
   currentPrice: number
   profit: number
   profitPercent: number
+}
+
+interface PortfolioAnalysis {
+  sharpeRatio: number
+  maxDrawdown: number
+  volatility: number
+  industryDistribution: Record<string, number>
+  correlationMatrix: Record<string, Record<string, number>>
 }
 
 export default function Portfolio() {
@@ -50,6 +61,7 @@ export default function Portfolio() {
     totalCost: 0,
     totalProfit: 0,
   })
+  const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [loading, setLoading] = useState(true)
   const [form] = Form.useForm()
@@ -63,6 +75,7 @@ export default function Portfolio() {
 
   useEffect(() => {
     fetchPortfolio()
+    fetchAnalysis()
   }, [])
 
   const fetchPortfolio = async () => {
@@ -74,6 +87,17 @@ export default function Portfolio() {
       console.error('Failed to fetch portfolio:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchAnalysis = async () => {
+    try {
+      const res = await quantApi.getPortfolioAnalysis()
+      if (res.data?.code === 0) {
+        setAnalysis(res.data.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch analysis:', error)
     }
   }
 
@@ -256,6 +280,115 @@ export default function Portfolio() {
           </Card>
         </Col>
       </Row>
+
+      {analysis && (
+        <Card
+          title={
+            <Space>
+              <BarChartOutlined /> 组合风险分析
+            </Space>
+          }
+          style={{ borderRadius: 16 }}
+        >
+          <Row gutter={[16, 16]}>
+            <Col span={8}>
+              <Card size="small">
+                <Statistic title="夏普比率" value={analysis.sharpeRatio} precision={2} />
+              </Card>
+            </Col>
+            <Col span={8}>
+              <Card size="small">
+                <Statistic
+                  title="最大回撤"
+                  value={analysis.maxDrawdown}
+                  precision={2}
+                  suffix="%"
+                  valueStyle={{ color: '#52c41a' }}
+                />
+              </Card>
+            </Col>
+            <Col span={8}>
+              <Card size="small">
+                <Statistic title="波动率" value={analysis.volatility} precision={2} suffix="%" />
+              </Card>
+            </Col>
+          </Row>
+          {Object.keys(analysis.correlationMatrix).length > 1 && (
+            <div style={{ marginTop: 16 }}>
+              <Text strong>相关性矩阵</Text>
+              <ReactECharts
+                option={{
+                  tooltip: { position: 'top' },
+                  grid: { height: '50%', top: '10%' },
+                  xAxis: {
+                    type: 'category',
+                    data: Object.keys(analysis.correlationMatrix),
+                    splitArea: { show: true },
+                  },
+                  yAxis: {
+                    type: 'category',
+                    data: Object.keys(analysis.correlationMatrix),
+                    splitArea: { show: true },
+                  },
+                  visualMap: {
+                    min: -1,
+                    max: 1,
+                    calculable: true,
+                    orient: 'horizontal',
+                    left: 'center',
+                    bottom: '15%',
+                    inRange: { color: ['#52c41a', '#fff', '#ff4d4f'] },
+                  },
+                  series: [
+                    {
+                      name: '相关性',
+                      type: 'heatmap',
+                      data: Object.entries(analysis.correlationMatrix).flatMap(([row, cols]) =>
+                        Object.entries(cols).map(([col, val]) => [row, col, val])
+                      ),
+                      label: {
+                        show: true,
+                        formatter: (p: { value: [string, string, number] }) =>
+                          p.value[2].toFixed(2),
+                      },
+                    },
+                  ],
+                }}
+                style={{ height: 350 }}
+              />
+            </div>
+          )}
+          {Object.keys(analysis.industryDistribution).length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <Text strong>行业分布</Text>
+              <ReactECharts
+                option={{
+                  tooltip: { trigger: 'item' },
+                  series: [
+                    {
+                      name: '行业分布',
+                      type: 'pie',
+                      radius: ['40%', '70%'],
+                      avoidLabelOverlap: false,
+                      itemStyle: {
+                        borderRadius: 10,
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                      },
+                      label: { show: true, formatter: '{b}: {d}%' },
+                      data: Object.entries(analysis.industryDistribution).map(([name, value]) => ({
+                        name,
+                        value,
+                      })),
+                    },
+                  ],
+                }}
+                style={{ height: 300 }}
+              />
+            </div>
+          )}
+        </Card>
+      )}
 
       <Card style={{ borderRadius: 16, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
         <Space direction="vertical" style={{ width: '100%' }} size="large">
