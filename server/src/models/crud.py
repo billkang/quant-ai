@@ -100,3 +100,55 @@ def add_transaction(db: Session, stock_code: str, stock_name: str, trans_type: s
     db.commit()
     db.refresh(transaction)
     return transaction
+
+
+def get_news_sources(db: Session) -> list[models.NewsSource]:
+    return db.query(models.NewsSource).all()
+
+
+def add_news_source(db: Session, name: str, source_type: str, config: dict, interval_minutes: int = 60) -> models.NewsSource:
+    source = models.NewsSource(
+        name=name,
+        source_type=source_type,
+        config=config,
+        interval_minutes=interval_minutes
+    )
+    db.add(source)
+    db.commit()
+    db.refresh(source)
+    return source
+
+
+def update_news_source(db: Session, source_id: int, name: str = None, source_type: str = None, config: dict = None, interval_minutes: int = None, enabled: bool = None) -> models.NewsSource | None:
+    source = db.query(models.NewsSource).filter(models.NewsSource.id == source_id).first()
+    if not source:
+        return None
+    if name is not None:
+        source.name = name
+    if source_type is not None:
+        source.source_type = source_type
+    if config is not None:
+        source.config = config
+    if interval_minutes is not None:
+        source.interval_minutes = interval_minutes
+    if enabled is not None:
+        source.enabled = 1 if enabled else 0
+    db.commit()
+    db.refresh(source)
+    return source
+
+
+def delete_news_source(db: Session, source_id: int) -> bool:
+    source = db.query(models.NewsSource).filter(models.NewsSource.id == source_id).first()
+    if source:
+        db.delete(source)
+        db.commit()
+        return True
+    return False
+
+
+def update_fetch_time(db: Session, source_id: int) -> None:
+    source = db.query(models.NewsSource).filter(models.NewsSource.id == source_id).first()
+    if source:
+        source.last_fetched_at = datetime.utcnow()
+        db.commit()

@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import { Card, Table, Button, Typography, Space, Tag, Modal, Form, Input, InputNumber, Select, Empty, Row, Col, Statistic } from 'antd'
+import { PlusOutlined, DeleteOutlined, FundOutlined, DollarOutlined, RiseOutlined, FallOutlined } from '@ant-design/icons'
+
+const { Title, Text } = Typography
 
 interface Position {
   code: string
@@ -25,13 +29,7 @@ export default function Portfolio() {
   })
   const [showAdd, setShowAdd] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({
-    stock_code: '',
-    stock_name: '',
-    type: 'buy',
-    quantity: '',
-    cost_price: ''
-  })
+  const [form] = Form.useForm()
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; code: string; name: string }>({
     show: false,
     code: '',
@@ -55,17 +53,16 @@ export default function Portfolio() {
   }
 
   const handleSubmit = async () => {
-    if (!form.stock_code || !form.quantity || !form.cost_price) return
-
     try {
+      const values = await form.validateFields()
       await axios.post('/api/portfolio', {
-        stock_code: form.stock_code,
-        stock_name: form.stock_name || form.stock_code,
-        quantity: parseInt(form.quantity),
-        cost_price: parseFloat(form.cost_price)
+        stock_code: values.stock_code,
+        stock_name: values.stock_name || values.stock_code,
+        quantity: values.quantity,
+        cost_price: values.cost_price
       })
       setShowAdd(false)
-      setForm({ stock_code: '', stock_name: '', type: 'buy', quantity: '', cost_price: '' })
+      form.resetFields()
       await fetchPortfolio()
     } catch (error) {
       console.error('Failed to add position:', error)
@@ -86,172 +83,238 @@ export default function Portfolio() {
     }
   }
 
-  const cancelDelete = () => {
-    setDeleteConfirm({ show: false, code: '', name: '' })
-  }
-
   const totalProfitPercent = data.totalCost > 0
     ? (data.totalProfit / data.totalCost * 100)
     : 0
 
+  const columns = [
+    {
+      title: '股票',
+      key: 'name',
+      width: '20%',
+      render: (_: unknown, record: Position) => (
+        <Space direction="vertical" size={0}>
+          <Text strong style={{ fontSize: 15 }}>{record.name}</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>{record.code}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: '持仓量',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      align: 'right' as const,
+      width: '12%',
+      render: (qty: number) => <Text>{qty} 股</Text>,
+    },
+    {
+      title: '成本价',
+      dataIndex: 'costPrice',
+      key: 'costPrice',
+      align: 'right' as const,
+      render: (price: number) => `¥${price?.toFixed(2) || '-'}`,
+    },
+    {
+      title: '现价',
+      dataIndex: 'currentPrice',
+      key: 'currentPrice',
+      align: 'right' as const,
+      render: (price: number) => `¥${price?.toFixed(2) || '-'}`,
+    },
+    {
+      title: '盈亏',
+      dataIndex: 'profit',
+      key: 'profit',
+      align: 'right' as const,
+      width: '15%',
+      render: (profit: number) => (
+        <Text type={profit >= 0 ? 'danger' : 'success'}>
+          {profit >= 0 ? '+' : ''}¥{profit?.toFixed(2) || '-'}
+        </Text>
+      ),
+    },
+    {
+      title: '盈亏比',
+      dataIndex: 'profitPercent',
+      key: 'profitPercent',
+      align: 'right' as const,
+      width: '12%',
+      render: (pct: number) => (
+        <Tag color={pct >= 0 ? 'red' : 'green'}>
+          {pct >= 0 ? '+' : ''}{pct?.toFixed(2) || '-'}%
+        </Tag>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      align: 'center' as const,
+      width: '10%',
+      render: (_: unknown, record: Position) => (
+        <Button 
+          type="text" 
+          danger 
+          icon={<DeleteOutlined />}
+          onClick={() => handleDeleteClick(record.code, record.name)}
+        />
+      ),
+    },
+  ]
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">持仓管理</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-gray-500 text-sm">持仓市值</div>
-          <div className="text-2xl font-bold">¥ {data.totalValue.toFixed(2)}</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-gray-500 text-sm">持仓盈亏</div>
-          <div className={`text-2xl font-bold ${data.totalProfit >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-            {data.totalProfit >= 0 ? '+' : ''}¥ {data.totalProfit.toFixed(2)}
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-gray-500 text-sm">盈亏比例</div>
-          <div className={`text-2xl font-bold ${totalProfitPercent >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-            {totalProfitPercent >= 0 ? '+' : ''}{totalProfitPercent.toFixed(2)}%
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-4 flex justify-end">
-        <button
-          onClick={() => setShowAdd(!showAdd)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          记录交易
-        </button>
-      </div>
-
-      {showAdd && (
-        <div className="bg-white rounded-lg shadow p-4 mb-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <input
-              type="text"
-              placeholder="股票代码"
-              value={form.stock_code}
-              onChange={e => setForm({ ...form, stock_code: e.target.value })}
-              className="border rounded px-3 py-2 col-span-2 md:col-span-1"
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <Row gutter={[20, 20]}>
+        <Col xs={24} sm={8}>
+          <Card style={{ 
+            borderRadius: 16, 
+            border: 'none',
+            background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+            boxShadow: '0 8px 32px rgba(17, 153, 142, 0.3)'
+          }}>
+            <Statistic
+              title={<span style={{ color: 'rgba(255,255,255,0.8)' }}>持仓市值</span>}
+              value={data.totalValue}
+              precision={2}
+              prefix={<DollarOutlined style={{ color: '#fff' }} />}
+              valueStyle={{ color: '#fff', fontSize: 36, fontWeight: 700 }}
             />
-            <select
-              value={form.type}
-              onChange={e => setForm({ ...form, type: e.target.value })}
-              className="border rounded px-3 py-2"
-            >
-              <option value="buy">买入</option>
-              <option value="sell">卖出</option>
-            </select>
-            <input
-              type="number"
-              placeholder="数量"
-              value={form.quantity}
-              onChange={e => setForm({ ...form, quantity: e.target.value })}
-              className="border rounded px-3 py-2"
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card style={{ 
+            borderRadius: 16, 
+            border: 'none',
+            background: data.totalProfit >= 0 
+              ? 'linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%)'
+              : 'linear-gradient(135deg, #52c41a 0%, #73d13d 100%)',
+            boxShadow: `0 8px 32px rgba(${data.totalProfit >= 0 ? '255,107,107' : '82,196,26'}, 0.3)`
+          }}>
+            <Statistic
+              title={<span style={{ color: 'rgba(255,255,255,0.8)' }}>持仓盈亏</span>}
+              value={data.totalProfit}
+              precision={2}
+              prefix={data.totalProfit >= 0 
+                ? <RiseOutlined style={{ color: '#fff' }} /> 
+                : <FallOutlined style={{ color: '#fff' }} />
+              }
+              valueStyle={{ color: '#fff', fontSize: 36, fontWeight: 700 }}
             />
-            <input
-              type="number"
-              placeholder="价格"
-              value={form.cost_price}
-              onChange={e => setForm({ ...form, cost_price: e.target.value })}
-              className="border rounded px-3 py-2"
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card style={{ 
+            borderRadius: 16, 
+            border: 'none',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)'
+          }}>
+            <Statistic
+              title={<span style={{ color: 'rgba(255,255,255,0.8)' }}>盈亏比例</span>}
+              value={totalProfitPercent}
+              precision={2}
+              suffix={<span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16 }}>%</span>}
+              valueStyle={{ color: '#fff', fontSize: 36, fontWeight: 700 }}
             />
-          </div>
-          <div className="mt-4 flex justify-end gap-2">
-            <button
-              onClick={() => setShowAdd(false)}
-              className="px-4 py-2 border rounded"
-            >
-              取消
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              保存
-            </button>
-          </div>
-        </div>
-      )}
+          </Card>
+        </Col>
+      </Row>
 
-      <div className="bg-white rounded-lg shadow">
-        {loading ? (
-          <div className="px-4 py-8 text-center text-gray-500">加载中...</div>
-        ) : data.positions.length === 0 ? (
-          <div className="px-4 py-8 text-center text-gray-500">
-            暂无持仓记录
+      <Card style={{ borderRadius: 16, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            padding: '0 8px'
+          }}>
+            <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <FundOutlined style={{ fontSize: 20, color: '#fff' }} />
+              </div>
+              持仓明细
+            </Title>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />}
+              onClick={() => setShowAdd(true)}
+              style={{ 
+                borderRadius: 8, 
+                background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', 
+                border: 'none'
+              }}
+            >
+              记录交易
+            </Button>
           </div>
-        ) : (
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">股票</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">持仓量</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">成本价</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">现价</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">盈亏</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">盈亏比</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-500">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.positions.map(pos => (
-                <tr key={pos.code} className="border-t">
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{pos.name}</div>
-                    <div className="text-sm text-gray-500">{pos.code}</div>
-                  </td>
-                  <td className="px-4 py-3 text-right">{pos.quantity}</td>
-                  <td className="px-4 py-3 text-right">¥{pos.costPrice.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right">¥{pos.currentPrice.toFixed(2)}</td>
-                  <td className={`px-4 py-3 text-right ${pos.profit >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                    {pos.profit >= 0 ? '+' : ''}¥{pos.profit.toFixed(2)}
-                  </td>
-                  <td className={`px-4 py-3 text-right ${pos.profitPercent >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                    {pos.profitPercent >= 0 ? '+' : ''}{pos.profitPercent.toFixed(2)}%
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => handleDeleteClick(pos.code, pos.name)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      删除
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
 
-      {/* 删除确认弹框 */}
-      {deleteConfirm.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-4">
-            <h3 className="text-lg font-semibold mb-4">确认删除</h3>
-            <p className="text-gray-600 mb-6">
-              确定要删除持仓 <span className="font-medium">{deleteConfirm.name}</span> ({deleteConfirm.code}) 吗？
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={cancelDelete}
-                className="px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                取消
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-              >
-                确定删除
-              </button>
-            </div>
+          <div style={{ padding: 24, background: '#fafafa', borderRadius: 12 }}>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: 40 }}>加载中...</div>
+            ) : data.positions.length === 0 ? (
+              <Empty description="暂无持仓记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            ) : (
+              <Table
+                columns={columns}
+                dataSource={data.positions}
+                rowKey="code"
+                pagination={false}
+              />
+            )}
           </div>
-        </div>
-      )}
+        </Space>
+      </Card>
+
+      <Modal
+        title="记录交易"
+        open={showAdd}
+        onOk={handleSubmit}
+        onCancel={() => setShowAdd(false)}
+        okText="保存"
+        centered
+      >
+        <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
+          <Form.Item name="stock_code" label="股票代码" rules={[{ required: true }]}>
+            <Input placeholder="如：600519" />
+          </Form.Item>
+          <Form.Item name="stock_name" label="股票名称">
+            <Input placeholder="如：贵州茅台" />
+          </Form.Item>
+          <Form.Item name="type" label="交易类型" initialValue="buy">
+            <Select options={[
+              { value: 'buy', label: '买入' },
+              { value: 'sell', label: '卖出' }
+            ]} />
+          </Form.Item>
+          <Form.Item name="quantity" label="数量" rules={[{ required: true }]}>
+            <InputNumber style={{ width: '100%' }} min={1} placeholder="100" />
+          </Form.Item>
+          <Form.Item name="cost_price" label="价格" rules={[{ required: true }]}>
+            <InputNumber style={{ width: '100%' }} min={0.01} precision={2} placeholder="100.00" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="确认删除"
+        open={deleteConfirm.show}
+        onOk={confirmDelete}
+        onCancel={() => setDeleteConfirm({ show: false, code: '', name: '' })}
+        okText="确定删除"
+        okButtonProps={{ danger: true }}
+        centered
+      >
+        <p style={{ fontSize: 16 }}>
+          确定要删除持仓 <Text strong>{deleteConfirm.name}</Text> ({deleteConfirm.code}) 吗？
+        </p>
+      </Modal>
     </div>
   )
 }

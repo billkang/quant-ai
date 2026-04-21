@@ -4,6 +4,7 @@ from datetime import datetime
 import redis
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.core.config import settings
@@ -123,6 +124,84 @@ async def get_news(category: str = "all", symbol: str | None = None):
         return news_service.get_macro_news()
     else:
         return news_service.get_stock_news(symbol or "")
+
+
+@app.get("/api/news/sources")
+async def get_news_sources(db: Session = Depends(get_db)):
+    sources = crud.get_news_sources(db)
+    return [
+        {
+            'id': s.id,
+            'name': s.name,
+            'sourceType': s.source_type,
+            'config': s.config,
+            'intervalMinutes': s.interval_minutes,
+            'enabled': bool(s.enabled),
+            'lastFetchedAt': s.last_fetched_at.isoformat() if s.last_fetched_at else None,
+        }
+        for s in sources
+    ]
+
+
+class NewsSourceCreate(BaseModel):
+    name: str
+    source_type: str
+    config: dict
+    interval_minutes: int = 60
+
+
+@app.post("/api/news/sources")
+async def add_news_source_body(
+    body: NewsSourceCreate,
+    db: Session = Depends(get_db)
+):
+    source = crud.add_news_source(db, body.name, body.source_type, body.config, body.interval_minutes)
+    return {'id': source.id, 'status': 'ok'}
+
+
+@app.put("/api/news/sources/{source_id}")
+async def update_news_source(
+    source_id: int,
+    name: str = None,
+    source_type: str = None,
+    config: dict = None,
+    interval_minutes: int = None,
+    enabled: bool = None,
+    db: Session = Depends(get_db)
+):
+    source = crud.update_news_source(db, source_id, name, source_type, config, interval_minutes, enabled)
+    if not source:
+        raise HTTPException(status_code=404, detail="数据源不存在")
+    return {'status': 'ok'}
+
+
+@app.delete("/api/news/sources/{source_id}")
+async def delete_news_source(source_id: int, db: Session = Depends(get_db)):
+    crud.delete_news_source(db, source_id)
+    return {'status': 'ok'}
+
+
+@app.post("/api/news/sources/{source_id}/fetch")
+async def fetch_news_source(source_id: int, db: Session = Depends(get_db)):
+    source = db.query(crud.models.NewsSource).filter(crud.models.NewsSource.id == source_id).first()
+    if not source:
+        raise HTTPException(status_code=404, detail="数据源不存在")
+
+    news_data = []
+    try:
+        if source.source_type == 'stock_news':
+            symbol = source.config.get('symbol', '')
+            news_data = news_service.get_stock_news(symbol)
+        elif source.source_type == 'stock_notices':
+            symbol = source.config.get('symbol', '')
+            news_data = news_service.get_stock_notices(symbol)
+        elif source.source_type == 'macro_news':
+            news_data = news_service.get_macro_news()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"拉取失败: {str(e)}")
+
+    crud.update_fetch_time(db, source_id)
+    return {'status': 'ok', 'count': len(news_data), 'data': news_data}
 
 
 @app.get("/api/ai/analyze")

@@ -124,8 +124,8 @@ export default function StockDetail() {
     <Spin spinning={loading}>
       <Card>
         <Space style={{ marginBottom: 16 }}>
-          <Button icon={<LeftOutlined />} onClick={() => navigate('/watchlist')}>
-            返回
+          <Button icon={<LeftOutlined />} onClick={() => navigate('/')}>
+            返回首页
           </Button>
         </Space>
         <Row gutter={16}>
