@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     AI_MODEL: str = "deepseek-chat"
     HTTP_PROXY: str = ""
     HTTPS_PROXY: str = ""
+    ENV: str = "development"
+    FRONTEND_URL: str = ""
 
 
 settings = Settings()
