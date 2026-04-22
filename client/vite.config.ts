@@ -13,4 +13,16 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          echarts: ['echarts', 'echarts-for-react'],
+          antd: ['antd', '@ant-design/icons'],
+          vendor: ['react', 'react-dom', 'react-router-dom', 'axios', 'zustand'],
+        },
+      },
+    },
+  },
 })

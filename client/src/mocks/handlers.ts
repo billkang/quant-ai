@@ -21,6 +21,26 @@ export const handlers = [
     return HttpResponse.json({ status: 'ok' })
   }),
 
+  http.get('/api/stocks/:code', () => {
+    return HttpResponse.json({
+      code: '600519',
+      name: '贵州茅台',
+      price: 1700,
+      change: 10,
+      changePercent: 0.59,
+      high: 1710,
+      low: 1690,
+      open: 1695,
+      volume: 5000000,
+    })
+  }),
+
+  http.get('/api/stocks/:code/kline', () => {
+    return HttpResponse.json([
+      { date: '2024-01-01', open: 1690, close: 1700, high: 1710, low: 1680, volume: 1000000 },
+    ])
+  }),
+
   http.get('/api/news', ({ request }) => {
     const url = new URL(request.url)
     const symbol = url.searchParams.get('symbol')
@@ -80,6 +100,58 @@ export const handlers = [
       totalCost: 160000,
       totalProfit: 10000,
     })
+  }),
+
+  http.get('/api/quant/indicators/:code', () => {
+    return HttpResponse.json({
+      code: 0,
+      data: {
+        stockCode: '600519',
+        tradeDate: '2024-01-01',
+        ma5: 1700,
+        ma20: 1680,
+        rsi6: 55,
+        macdDif: 0.5,
+        macdBar: 0.2,
+      },
+    })
+  }),
+
+  http.get('/api/quant/indicators/:code/history', () => {
+    return HttpResponse.json({
+      code: 0,
+      data: [
+        {
+          tradeDate: '2024-01-01',
+          ma5: 1700,
+          macdDif: 0.5,
+          macdDea: 0.3,
+          macdBar: 0.2,
+          rsi6: 55,
+        },
+      ],
+    })
+  }),
+
+  http.get('/api/quant/fundamentals/:code', () => {
+    return HttpResponse.json({
+      code: 0,
+      data: {
+        stockCode: '600519',
+        reportDate: '2024-03-31',
+        peTtm: 25.5,
+        pb: 8.2,
+        roe: 15.2,
+      },
+    })
+  }),
+
+  http.get('/api/quant/alerts', () => {
+    return HttpResponse.json({ code: 0, data: [] })
+  }),
+
+  http.put('/api/quant/alerts/:id/read', () => {
+    return HttpResponse.json({ code: 0, data: null })
   }),
 ]
 

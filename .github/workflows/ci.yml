@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: quantai
+          POSTGRES_PASSWORD: quantai123
+          POSTGRES_DB: quant_ai
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        working-directory: ./server
+        run: uv pip install --system -r pyproject.toml
+
+      - name: Run ruff check
+        working-directory: ./server
+        run: ruff check src
+
+      - name: Run ruff format check
+        working-directory: ./server
+        run: ruff format --check src
+
+      - name: Run mypy
+        working-directory: ./server
+        run: mypy src
+
+      - name: Run pytest
+        working-directory: ./server
+        env:
+          DATABASE_URL: postgresql://quantai:quantai123@localhost:5432/quant_ai
+          REDIS_URL: redis://localhost:6379/0
+          AI_API_KEY: test-key
+        run: PYTHONPATH=. pytest -v
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Install dependencies
+        working-directory: ./client
+        run: pnpm install --frozen-lockfile
+
+      - name: Run lint
+        working-directory: ./client
+        run: pnpm run lint
+
+      - name: Run format check
+        working-directory: ./client
+        run: pnpm run format:check
+
+      - name: Run tests
+        working-directory: ./client
+        run: pnpm run test
+
+      - name: Build
+        working-directory: ./client
+        run: pnpm run build
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: docker compose build

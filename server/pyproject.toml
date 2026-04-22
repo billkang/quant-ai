@@ -39,6 +39,11 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 addopts = "-v --tb=short --strict-markers"
+env = [
+    "DATABASE_URL=postgresql://quantai:quantai123@localhost:5432/quant_ai",
+    "REDIS_URL=redis://localhost:6379/0",
+    "AI_API_KEY=test-key",
+]
 
 [tool.ruff]
 target-version = "py311"

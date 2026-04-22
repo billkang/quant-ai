@@ -4,9 +4,6 @@ __pycache__/
 *.so
 *.egg-info/
 
-# Conda (not venv - we use conda + uv)
-# .conda/ is usually in ~/.conda, no need to ignore here
-
 # Server
 .env
 .ruff_cache/
@@ -18,9 +15,6 @@ __pycache__/
 node_modules/
 dist/
 
-# Docker
-docker-compose.override.yml
-
 # IDE
 .vscode/
 .idea/
@@ -28,9 +22,6 @@ docker-compose.override.yml
 
 # OS
 .DS_Store
-
-# OpenClaw
-.opencode/
 
 # Logs
 *.log

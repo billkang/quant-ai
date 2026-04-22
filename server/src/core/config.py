@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     HTTPS_PROXY: str = ""
     ENV: str = "development"
     FRONTEND_URL: str = ""
+    DOCS_USERNAME: str = ""
+    DOCS_PASSWORD: str = ""
 
 
 settings = Settings()

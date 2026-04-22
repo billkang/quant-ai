@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api import ai, news, portfolio, quant, stocks
 from src.core.config import settings
+from src.core.docs_auth import DocsAuthMiddleware
+from src.core.exceptions import register_exception_handlers
 from src.core.middleware import RateLimitMiddleware
 from src.services.scheduler import scheduler_service
 
@@ -26,6 +28,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Quant AI API", version="0.1.0", lifespan=lifespan)
+register_exception_handlers(app)
 
 # CORS: allow local dev and production domain
 # allow_credentials=True + allow_origins=["*"] is invalid in browsers
@@ -42,6 +45,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
+app.add_middleware(DocsAuthMiddleware)
 
 app.include_router(stocks.router, prefix="/api")
 app.include_router(news.router, prefix="/api")

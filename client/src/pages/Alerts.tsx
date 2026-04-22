@@ -15,7 +15,7 @@ import {
 import { CheckOutlined, PlusOutlined, AlertOutlined } from '@ant-design/icons'
 import { quantApi } from '../services/api'
 
-const { Text } = Typography
+const { Text, Title } = Typography
 
 interface AlertItem {
   id: number
