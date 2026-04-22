@@ -59,10 +59,10 @@ export default function News() {
   const [news, setNews] = useState<NewsItem[]>([])
   const [tabKey, setTabKey] = useState('news')
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchSources()
     fetchWatchlist()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchWatchlist = async () => {

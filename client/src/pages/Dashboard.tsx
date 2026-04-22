@@ -70,7 +70,7 @@ export default function Dashboard() {
       message.success(`已添加 ${res.data.name}`)
       setNewCode('')
       await fetchWatchlist()
-    } catch (error) {
+    } catch {
       message.error('添加失败')
     }
   }

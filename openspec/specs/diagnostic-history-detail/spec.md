@@ -4,13 +4,15 @@
 
 查看历史诊断的完整详情，包括基本面分析、技术面分析、风险评估和最终报告。
 
+> **注意**: 本规格功能已合并到 `ai-advice` 模块中，共享同一组 API 端点。
+
 ## API 接口
 
 ### 获取诊断历史列表
 ```
 GET /api/ai/history?code={stock_code}&limit={limit}
 ```
-Response:
+Response: 直接返回数组 (无 success_response 包装)
 ```json
 [
   {
@@ -28,7 +30,7 @@ Response:
 ```
 GET /api/ai/history/{id}
 ```
-Response:
+Response: 直接返回 dict (无 success_response 包装)
 ```json
 {
   "id": 1,
@@ -62,3 +64,11 @@ Response:
 #### Scenario: 查看诊断详情
 - **WHEN** 用户点击历史记录
 - **THEN** 系统弹出详情弹窗显示完整分析内容
+
+## 状态
+
+✅ 已完成 (合并到 ai-advice)
+
+## 遗留问题
+
+- `GET /api/ai/history` 和 `GET /api/ai/history/{id}` 直接返回数据，未统一使用 success_response 包装。

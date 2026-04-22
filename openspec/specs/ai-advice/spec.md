@@ -6,44 +6,52 @@ AI 驱动的股票诊断与投资建议生成。
 
 ## API 接口
 
-### AI 股票诊断
+### AI 股票诊断 (遗留端点)
+```
+GET /api/ai/analyze?code=600519
+```
+> **遗留端点**: 直接返回原始 JSON，未使用 success_response 包装。
+
+Response:
+```json
+{
+  "code": "600519",
+  "advice": "根据当前市场分析..."
+}
+```
+
+### AI 股票诊断 (V2)
 ```
 POST /api/ai/analyze
 ```
-Request:
+Request (BaseModel):
 ```json
 {
   "code": "600519",
   "dimensions": ["fundamental", "technical", "risk"]
 }
 ```
-Response:
+Response (success_response 包装):
 ```json
 {
-  "code": "600519",
-  "fundamentalAnalysis": "基本面分析...",
-  "technicalAnalysis": "技术面分析...",
-  "riskAnalysis": "风险评估...",
-  "finalReport": "最终建议..."
+  "code": 0,
+  "data": {
+    "code": "600519",
+    "fundamental_analysis": "基本面分析...",
+    "technical_analysis": "技术面分析...",
+    "risk_analysis": "风险评估...",
+    "final_report": "最终建议..."
+  },
+  "message": "ok"
 }
 ```
-
-### AI 问答
-```
-GET /api/ai/chat?question={text}
-```
-Response:
-```json
-{
-  "answer": "根据当前市场分析..."
-}
-```
+> **注意**: 成功时会自动保存诊断历史到 `diagnostic_history` 表。
 
 ### 获取诊断历史列表
 ```
 GET /api/ai/history?code={stock_code}&limit={limit}
 ```
-Response:
+Response: 直接返回数组 (无 success_response 包装)
 ```json
 [
   {
@@ -61,7 +69,7 @@ Response:
 ```
 GET /api/ai/history/{id}
 ```
-Response:
+Response: 直接返回 dict (无 success_response 包装)
 ```json
 {
   "id": 1,
@@ -73,6 +81,19 @@ Response:
   "finalReport": "最终建议...",
   "score": "买入",
   "createdAt": "2024-01-15T10:00:00"
+}
+```
+
+### AI 问答
+```
+GET /api/ai/chat?question={text}
+```
+Response (success_response 包装):
+```json
+{
+  "code": 0,
+  "data": { "answer": "根据当前市场分析..." },
+  "message": "ok"
 }
 ```
 
@@ -106,6 +127,25 @@ Response:
 | API 调用失败 | 返回错误信息给用户 |
 | 股票不存在 | 返回 "股票不存在" |
 
+## 数据模型
+
+### diagnostic_history 表
+- id: 主键
+- stock_code: 股票代码
+- stock_name: 股票名称
+- fundamental_analysis: 基本面分析 (TEXT)
+- technical_analysis: 技术面分析 (TEXT)
+- risk_analysis: 风险评估 (TEXT)
+- final_report: 最终报告 (TEXT)
+- score: 评分/建议 (String(10))
+- created_at: 创建时间
+
 ## 状态
 
-⚠️ 需要配置 AI_API_KEY 才能使用
+✅ 已完成
+
+## 遗留问题
+
+1. 同时存在 `GET /api/ai/analyze` 和 `POST /api/ai/analyze`，建议后续移除 GET 遗留端点。
+2. `GET /history` 和 `GET /history/{id}` 直接返回数据，未统一使用 success_response 包装。
+3. `POST /analyze` 的响应 data 中包含 `code` 字段（股票代码），与外层 `code: 0`（状态码）命名冲突，需注意解析。

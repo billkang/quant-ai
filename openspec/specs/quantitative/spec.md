@@ -6,10 +6,12 @@
 
 ## API 接口
 
+所有量化分析端点均使用 `success_response` 统一包装响应 (`{"code": 0, "data": ..., "message": "ok"}`)。
+
 ### 技术指标
 
 ```
-GET /api/quant/indicators/:code
+GET /api/quant/indicators/{code}
 ```
 Response:
 ```json
@@ -36,12 +38,13 @@ Response:
     "bollLower": 1580.0,
     "volMa5": 5000000,
     "volMa10": 4800000
-  }
+  },
+  "message": "ok"
 }
 ```
 
 ```
-GET /api/quant/indicators/:code/history?limit=60
+GET /api/quant/indicators/{code}/history?limit=60
 ```
 返回近 60 个交易日的指标历史，用于图表绘制。
 
@@ -50,7 +53,7 @@ GET /api/quant/indicators/:code/history?limit=60
 ```
 POST /api/quant/backtest
 ```
-Body:
+Body (BaseModel):
 ```json
 {
   "stockCode": "600519",
@@ -80,19 +83,20 @@ Response:
     "trades": [
       {"date": "2025-01-05", "action": "buy", "price": 1600, "shares": 62}
     ]
-  }
+  },
+  "message": "ok"
 }
 ```
 
 ```
-GET /api/quant/backtests
-GET /api/quant/backtests/:id
+GET /api/quant/backtests?limit=50
+GET /api/quant/backtests/{id}
 ```
 
 ### 基本面数据
 
 ```
-GET /api/quant/fundamentals/:code
+GET /api/quant/fundamentals/{code}
 ```
 Response:
 ```json
@@ -103,13 +107,20 @@ Response:
     "reportDate": "2025-12-31",
     "peTtm": 28.5,
     "pb": 8.2,
+    "ps": 5.5,
     "roe": 25.5,
+    "roa": 18.2,
     "grossMargin": 91.5,
+    "netMargin": 52.3,
     "revenueGrowth": 15.2,
-    "debtRatio": 25.0
-  }
+    "profitGrowth": 18.5,
+    "debtRatio": 25.0,
+    "freeCashFlow": 5000000000
+  },
+  "message": "ok"
 }
 ```
+> 若数据库无数据，会尝试从 akshare 实时拉取并缓存。
 
 ### 组合分析
 
@@ -134,21 +145,60 @@ Response:
       "300750": {"600519": 0.3, "300750": 1.0, "000001": 0.2},
       "000001": {"600519": 0.1, "300750": 0.2, "000001": 1.0}
     }
-  }
+  },
+  "message": "ok"
 }
 ```
 
 ### 告警
 
 ```
-GET /api/quant/alerts
+GET /api/quant/alerts?is_read={bool}&limit=50
 POST /api/quant/alerts/rules
-PUT /api/quant/alerts/:id/read
+PUT /api/quant/alerts/{id}/read
+```
+
+告警规则 Request Body (BaseModel):
+```json
+{
+  "stockCode": "600519",
+  "alertType": "price_breakout",
+  "condition": "price > 1900",
+  "message": "价格突破1900元"
+}
 ```
 
 ## 数据模型
 
-参见 `design.md` 中的完整表结构。
+### stock_indicators 表
+- id, stock_code, trade_date
+- ma5/10/20/60, rsi6/12/24
+- macd_dif/dea/bar
+- kdj_k/d/j
+- boll_upper/mid/lower
+- vol_ma5/10
+- created_at
+
+### stock_fundamentals 表
+- id, stock_code, report_date
+- pe_ttm, pb, ps
+- roe, roa, gross_margin, net_margin
+- revenue_growth, profit_growth
+- debt_ratio, free_cash_flow
+- created_at
+
+### strategy_backtests 表
+- id, strategy_name, stock_code
+- start_date, end_date, initial_cash, final_value
+- total_return, annualized_return, max_drawdown
+- sharpe_ratio, win_rate, trade_count
+- trades (JSON), equity_curve (JSON)
+- created_at
+
+### alerts 表
+- id, stock_code, alert_type, condition
+- triggered_at, message, is_read (Integer: 1/0)
+- created_at
 
 ## 内置策略
 
@@ -168,4 +218,11 @@ PUT /api/quant/alerts/:id/read
 
 ## 状态
 
-🚧 计划中
+✅ 已完成
+
+## 响应格式说明
+
+量化分析模块的所有端点均统一使用 `success_response` 包装：
+- 成功: `{"code": 0, "data": ..., "message": "ok"}`
+- 无数据: `{"code": 0, "data": null, "message": "ok"}`
+- 错误: 抛出 HTTPException

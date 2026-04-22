@@ -224,15 +224,15 @@ class BacktestService:
         win_rate = self._calc_win_rate(portfolio.trades)
 
         return {
-            "total_return": round(total_return, 2),
-            "annualized_return": round(annualized_return, 2),
-            "max_drawdown": round(max_drawdown, 2),
-            "sharpe_ratio": round(sharpe_ratio, 2),
-            "win_rate": round(win_rate, 2),
+            "total_return": float(round(total_return, 2)),
+            "annualized_return": float(round(annualized_return, 2)),
+            "max_drawdown": float(round(max_drawdown, 2)),
+            "sharpe_ratio": float(round(sharpe_ratio, 2)),
+            "win_rate": float(round(win_rate, 2)),
             "trade_count": len(portfolio.trades),
             "equity_curve": portfolio.equity_curve,
             "trades": portfolio.trades,
-            "final_value": round(final_value, 2),
+            "final_value": float(round(final_value, 2)),
         }
 
     def _calc_max_drawdown(self, equity_values: list[float]) -> float:

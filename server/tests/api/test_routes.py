@@ -1,13 +1,22 @@
+import os
+
+os.environ.setdefault("DATABASE_URL", "sqlite:///./test.db")
+
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from src.main import app
 from src.models.database import Base
 
-# Create a fresh SQLite file database for API tests
-TEST_DB_URL = "sqlite:///./test_api.db"
-engine = create_engine(TEST_DB_URL)
+# Create a fresh SQLite memory database for API tests
+TEST_DB_URL = "sqlite:///:memory:"
+engine = create_engine(
+    TEST_DB_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Monkey-patch the app's database module before creating TestClient
@@ -16,8 +25,36 @@ import src.models.database as db_module  # noqa: E402
 db_module.engine = engine
 db_module.SessionLocal = TestingSessionLocal
 
+# Also patch services that import SessionLocal at module level
+import src.services.news as _news_module  # noqa: E402
+
+_news_module.SessionLocal = TestingSessionLocal
+
+# Import models so their tables are registered on Base.metadata
+import src.models.models  # noqa: E402, F401
+
 # Create all tables
 Base.metadata.create_all(bind=engine)
+
+# Mock Redis to avoid connection errors in tests
+import src.api.deps as _deps_module  # noqa: E402
+
+
+class _FakeRedis:
+    _store = {}
+
+    def get(self, key):
+        return self._store.get(key)
+
+    def setex(self, key, ttl, value):
+        self._store[key] = value
+
+    def delete(self, *keys):
+        for k in keys:
+            self._store.pop(k, None)
+
+
+_deps_module.redis_client = _FakeRedis()
 
 client = TestClient(app)
 

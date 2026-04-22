@@ -10,7 +10,7 @@
 ```
 GET /api/portfolio
 ```
-Response:
+Response: 直接返回 dict (无 success_response 包装)
 ```json
 {
   "positions": [
@@ -33,26 +33,37 @@ Response:
 ### 添加持仓
 ```
 POST /api/portfolio
-Body:
-{
-  "stock_code": "600519",
-  "stock_name": "贵州茅台",
-  "quantity": 100,
-  "cost_price": 1800.00,
-  "buy_date": "2024-01-10"
-}
+```
+> **注意**: 当前使用 query params 传递参数，未使用 BaseModel Request Body。不符合项目规范。
+
+Query params:
+- `stock_code`: 股票代码
+- `stock_name`: 股票名称
+- `quantity`: 数量
+- `cost_price`: 成本价
+- `buy_date`: 买入日期 (可选, 格式: YYYY-MM-DD)
+
+Response:
+```json
+{ "code": 0, "data": null, "message": "ok" }
 ```
 
 ### 删除持仓
 ```
-DELETE /api/portfolio/600519
+DELETE /api/portfolio/{stock_code}
+```
+Response:
+```json
+{ "code": 0, "data": null, "message": "ok" }
 ```
 
 ### 获取交易记录
 ```
-GET /api/transactions?limit=50
+GET /api/portfolio/transactions?limit=50
 ```
-Response:
+> **注意**: 实际路径为 `/api/portfolio/transactions`，非 `/api/transactions`。
+
+Response: 直接返回数组 (无 success_response 包装)
 ```json
 [
   {
@@ -101,3 +112,8 @@ Response:
 ## 状态
 
 ✅ 已完成
+
+## 遗留问题
+
+1. `POST /api/portfolio` 应改为 BaseModel Request Body 以符合项目规范。
+2. `GET /api/portfolio` 和 `GET /api/portfolio/transactions` 直接返回数据，未统一使用 success_response 包装。
