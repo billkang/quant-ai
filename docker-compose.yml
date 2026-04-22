@@ -16,7 +16,7 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-quantai}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-quantai} -d ${POSTGRES_DB:-quant_ai}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -66,6 +66,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
