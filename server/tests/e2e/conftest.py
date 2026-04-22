@@ -303,6 +303,32 @@ def e2e_client(monkeypatch, db_session):
 
     monkeypatch.setattr(sched_module, "SessionLocal", db_module.SessionLocal)
 
+    # --- Patch authentication ---
+    import jwt
+
+    from src.api.auth import get_current_user
+    from src.core.config import settings
+    from src.models.models import User
+
+    _mock_user = User(id=1, username="e2e_user", email="e2e@test.com", is_active=True)
+
+    from fastapi import Header
+
+    def _mock_get_current_user(token: str = Header(default="", alias="Authorization")):
+        if token and token.startswith("Bearer "):
+            try:
+                payload = jwt.decode(token[7:], settings.SECRET_KEY, algorithms=["HS256"])
+                user_id = payload.get("sub")
+                if user_id:
+                    user = db_session.query(User).filter(User.id == int(user_id)).first()
+                    if user:
+                        return user
+            except Exception:
+                pass
+        return _mock_user
+
+    app.dependency_overrides[get_current_user] = _mock_get_current_user
+
     # --- Patch AI services ---
     import src.services.ai_analysis as ai_module
 
@@ -315,16 +341,19 @@ def e2e_client(monkeypatch, db_session):
 
     import src.services.ai_diagnostic as diag_module
 
-    monkeypatch.setattr(
-        diag_module.diagnostic_service,
-        "analyze",
-        lambda code, stock, news: {
+    def _mock_diagnostic_analyze(code, stock, indicators=None, fundamentals=None, news=None):
+        return {
             "fundamental_analysis": "基本面良好（测试）",
             "technical_analysis": "技术面中性（测试）",
             "risk_analysis": "风险可控（测试）",
             "final_report": "综合诊断报告（测试）",
             "score": "80",
-        },
+        }
+
+    monkeypatch.setattr(
+        diag_module.diagnostic_service,
+        "analyze",
+        _mock_diagnostic_analyze,
     )
 
     # --- Remove rate-limit and docs-auth middleware so tests run unrestricted ---

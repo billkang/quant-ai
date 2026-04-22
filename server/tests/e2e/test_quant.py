@@ -164,6 +164,7 @@ class TestQuantAlertsE2E:
             condition="RSI6 < 20",
             message="RSI6 超卖",
             triggered_at=datetime.now(),
+            user_id=1,
         )
         db_session.refresh(alert)
 

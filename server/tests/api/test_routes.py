@@ -105,6 +105,82 @@ class TestNewsAPI:
 
 
 class TestAIAPI:
+    def test_post_analyze_passes_dict_params(self, monkeypatch):
+        from datetime import date
+
+        import src.api.auth as auth_module
+        from src.models import crud, models
+
+        # Create a mock user and patch authentication
+        mock_user = models.User(id=1, username="test", email="t@test.com", is_active=True)
+        app.dependency_overrides[auth_module.get_current_user] = lambda: mock_user
+
+        # Insert indicator and fundamental data into the test DB
+        db = db_module.SessionLocal()
+        crud.save_indicator(
+            db,
+            "000001",
+            date(2025, 1, 15),
+            ma5=10.0,
+            ma20=11.0,
+            rsi6=45.0,
+            macd_dif=0.5,
+            macd_dea=0.3,
+            boll_upper=13.0,
+            boll_lower=9.0,
+        )
+        crud.save_fundamental(
+            db,
+            "000001",
+            date(2025, 1, 15),
+            pe_ttm=15.5,
+            pb=2.1,
+            roe=12.5,
+            gross_margin=35.0,
+            revenue_growth=10.2,
+            debt_ratio=45.0,
+        )
+        db.close()
+
+        # Capture arguments passed to diagnostic_service.analyze
+        captured = {}
+
+        def _mock_analyze(code, stock, indicators=None, fundamentals=None, news=None):
+            captured["indicators"] = indicators
+            captured["fundamentals"] = fundamentals
+            captured["news"] = news
+            return {
+                "fundamental_analysis": "基本面良好",
+                "technical_analysis": "技术面中性",
+                "risk_analysis": "风险可控",
+                "final_report": "综合报告",
+            }
+
+        import src.api.ai as ai_module
+        import src.services.ai_diagnostic as diag_module
+
+        monkeypatch.setattr(diag_module.diagnostic_service, "analyze", _mock_analyze)
+
+        async def _mock_get_stock(code):
+            return {"code": code, "name": f"股票{code}", "price": 10.5}
+
+        monkeypatch.setattr(ai_module, "get_stock", _mock_get_stock)
+
+        response = client.post("/api/ai/analyze", json={"code": "000001"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["code"] == 0
+        assert data["data"]["fundamental_analysis"] == "基本面良好"
+
+        # The key assertion: indicators and fundamentals must be dicts, not lists
+        assert isinstance(captured["indicators"], dict)
+        assert captured["indicators"].get("ma5") == 10.0
+        assert isinstance(captured["fundamentals"], dict)
+        assert captured["fundamentals"].get("pe_ttm") == 15.5
+        assert isinstance(captured["news"], list)
+
+        app.dependency_overrides.pop(auth_module.get_current_user, None)
+
     def test_get_history_empty(self):
         response = client.get("/api/ai/history")
         assert response.status_code == 200

@@ -43,7 +43,35 @@ async def analyze_stock(
         from src.services.ai_diagnostic import diagnostic_service
 
         news = news_service.get_stock_news(req.code)
-        result = diagnostic_service.analyze(req.code, stock, news)
+        indicator = crud.get_latest_indicator(db, req.code)
+        fundamental = crud.get_latest_fundamental(db, req.code)
+
+        indicators = {}
+        if indicator:
+            indicators = {
+                "ma5": indicator.ma5,
+                "ma20": indicator.ma20,
+                "rsi6": indicator.rsi6,
+                "macd_dif": indicator.macd_dif,
+                "macd_dea": indicator.macd_dea,
+                "boll_upper": indicator.boll_upper,
+                "boll_lower": indicator.boll_lower,
+            }
+
+        fundamentals = {}
+        if fundamental:
+            fundamentals = {
+                "pe_ttm": fundamental.pe_ttm,
+                "pb": fundamental.pb,
+                "roe": fundamental.roe,
+                "gross_margin": fundamental.gross_margin,
+                "revenue_growth": fundamental.revenue_growth,
+                "debt_ratio": fundamental.debt_ratio,
+            }
+
+        result = diagnostic_service.analyze(
+            req.code, stock, indicators=indicators, fundamentals=fundamentals, news=news
+        )
 
         try:
             crud.save_diagnostic_history(

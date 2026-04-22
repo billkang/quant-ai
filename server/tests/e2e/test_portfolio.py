@@ -69,7 +69,7 @@ class TestPortfolioE2E:
 
     def test_get_transactions(self, e2e_client, db_session):
         crud.add_transaction(
-            db_session, "000001", "平安银行", "buy", 100, 10.0, 5.0, datetime.now()
+            db_session, "000001", "平安银行", "buy", 100, 10.0, 5.0, datetime.now(), user_id=1
         )
 
         response = e2e_client.get("/api/portfolio/transactions")
