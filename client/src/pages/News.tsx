@@ -8,6 +8,7 @@ import {
   StockOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons'
+import api from '../services/api'
 
 const { Text, Title } = Typography
 
@@ -67,8 +68,8 @@ export default function News() {
 
   const fetchWatchlist = async () => {
     try {
-      const res = await fetch('/api/stocks/watchlist')
-      const data = await res.json()
+      const res = await api.get('/stocks/watchlist')
+      const data = res.data
       setStocks(data.map((s: { code: string; name: string }) => ({ code: s.code, name: s.name })))
     } catch (error) {
       console.error('Failed to fetch watchlist:', error)
@@ -78,8 +79,8 @@ export default function News() {
   const fetchSources = async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/news/sources')
-      const data = await res.json()
+      const res = await api.get('/news/sources')
+      const data = res.data
       setSources(data)
       if (data.length === 0) await initDefaultSources()
     } catch (error) {
@@ -90,16 +91,12 @@ export default function News() {
   }
 
   const initDefaultSources = async () => {
-    const watchlistRes = await fetch('/api/stocks/watchlist')
-    const watchlist = await watchlistRes.json()
+    const watchlistRes = await api.get('/stocks/watchlist')
+    const watchlist = watchlistRes.data
     const existingSymbols = new Set()
     for (const src of MARKET_SOURCES) {
       try {
-        await fetch('/api/news/sources', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(src),
-        })
+        await api.post('/news/sources', src)
         existingSymbols.add(src.config.symbol)
       } catch (e) {
         console.error(e)
@@ -108,15 +105,11 @@ export default function News() {
     for (const stock of watchlist) {
       if (!existingSymbols.has(stock.code)) {
         try {
-          await fetch('/api/news/sources', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: stock.name,
-              source_type: 'stock_news',
-              config: { symbol: stock.code },
-              interval_minutes: 60,
-            }),
+          await api.post('/news/sources', {
+            name: stock.name,
+            source_type: 'stock_news',
+            config: { symbol: stock.code },
+            interval_minutes: 60,
           })
         } catch (e) {
           console.error(e)
@@ -130,8 +123,8 @@ export default function News() {
     if (!stockCode) return
     setNewsLoading(true)
     try {
-      const res = await fetch(`/api/news?symbol=${stockCode}`)
-      const data = await res.json()
+      const res = await api.get('/news', { params: { symbol: stockCode } })
+      const data = res.data
       setNews(data)
     } catch (error) {
       console.error(error)

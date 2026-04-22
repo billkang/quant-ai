@@ -10,7 +10,7 @@ import {
   AreaChartOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons'
-import { quantApi } from '../services/api'
+import { quantApi, stockApi } from '../services/api'
 
 interface StockData {
   code: string
@@ -78,18 +78,16 @@ export default function StockDetail() {
   useEffect(() => {
     if (!code) return
     setLoading(true)
-    fetch(`/api/stocks/${code}`)
-      .then(res => res.json())
-      .then(data => setStock(data))
+    stockApi
+      .getStock(code)
+      .then(res => setStock(res.data))
       .finally(() => setLoading(false))
   }, [code])
 
   useEffect(() => {
     if (!code) return
     const periodMap: Record<string, string> = { daily: '6mo', weekly: '6mo', monthly: '1y' }
-    fetch(`/api/stocks/${code}/kline?period=${periodMap[period] || '6mo'}`)
-      .then(res => res.json())
-      .then(data => setKlines(data))
+    stockApi.getKline(code, periodMap[period] || '6mo').then(res => setKlines(res.data))
   }, [code, period])
 
   useEffect(() => {

@@ -13,7 +13,7 @@ rules:
     - Use Ant Design components (not raw HTML) for UI
     - Test changes with docker-compose up -d --build
     - FastAPI endpoints use BaseModel classes for POST bodies (query params are legacy)
-    - Maintain API response consistency: most endpoints wrap with {code: 0, data, message}
+    - "Maintain API response consistency: most endpoints wrap with {code: 0, data, message}"
 
 artifacts:
   design:

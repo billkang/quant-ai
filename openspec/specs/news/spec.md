@@ -6,11 +6,11 @@
 
 ## API 接口
 
-### 获取资讯列表（从数据库）
+### 获取资讯列表
 ```
 GET /api/news?category={all|stock|macro}&symbol={code}
 ```
-- category: all (默认), stock, macro — **当前未实现过滤逻辑**
+- category: all (默认), stock, macro — **当前被忽略**
 - symbol: 股票代码 (可选)
 
 Response: 直接返回数组 (无 success_response 包装)
@@ -26,29 +26,25 @@ Response: 直接返回数组 (无 success_response 包装)
   }
 ]
 ```
-> **注意**: 当前仅支持按 `symbol` 查询，传入 symbol 时调用 `get_stock_news_from_db(symbol)`，否则返回空数组。`category` 参数被忽略。
+> **注意**: 当前仅支持按 `symbol` 查询。传入 symbol 时调用 `get_stock_news_from_db(symbol)`，会自动创建 source 并抓取；否则返回空数组。`category` 参数被忽略。
 
 ### 获取数据源列表
 ```
 GET /api/news/sources
 ```
-Response:
+Response: 直接返回数组 (无 success_response 包装)
 ```json
-{
-  "code": 0,
-  "data": [
-    {
-      "id": 1,
-      "name": "贵州茅台",
-      "sourceType": "stock_news",
-      "config": { "symbol": "600519" },
-      "intervalMinutes": 60,
-      "enabled": true,
-      "lastFetchedAt": "2024-01-15T10:30:00"
-    }
-  ],
-  "message": "ok"
-}
+[
+  {
+    "id": 1,
+    "name": "贵州茅台",
+    "sourceType": "stock_news",
+    "config": { "symbol": "600519" },
+    "intervalMinutes": 60,
+    "enabled": true,
+    "lastFetchedAt": "2024-01-15T10:30:00"
+  }
+]
 ```
 
 ### 添加数据源
@@ -64,30 +60,41 @@ Body (BaseModel):
   "interval_minutes": 60
 }
 ```
+Response (success_response):
+```json
+{ "code": 0, "data": { "id": 1 }, "message": "ok" }
+```
 
 ### 更新数据源
 ```
 PUT /api/news/sources/{id}
 ```
 Query params: `name`, `source_type`, `config`, `interval_minutes`, `enabled`
+Response:
+```json
+{ "code": 0, "data": null, "message": "ok" }
+```
 
 ### 删除数据源
 ```
 DELETE /api/news/sources/{id}
+```
+Response:
+```json
+{ "code": 0, "data": null, "message": "ok" }
 ```
 
 ### 手动拉取（带判重）
 ```
 POST /api/news/sources/{id}/fetch
 ```
-Response: 直接返回 service 结果 (无 success_response 包装)
+Response: 直接返回 service result (无 success_response 包装)
 ```json
 {
   "status": "ok",
   "count": 10,
   "skipped": 0,
-  "new": 10,
-  "data": [...]
+  "new": 10
 }
 ```
 - `skipped`: 因间隔未到而跳过的次数
@@ -104,25 +111,25 @@ Response: 直接返回 service 结果 (无 success_response 包装)
 ## 数据模型
 
 ### news_sources 表
-- id: 主键
-- name: 数据源名称
-- source_type: 类型
-- config: 配置 (JSON)
-- interval_minutes: 拉取周期
-- enabled: 是否启用 (Integer: 1/0)
-- last_fetched_at: 上次拉取时间
-- created_at: 创建时间
+- id (Integer, PK)
+- name (String(100))
+- source_type (String(50))
+- config (JSON)
+- interval_minutes (Integer, default=60)
+- enabled (Integer, default=1)
+- last_fetched_at (DateTime, nullable)
+- created_at (DateTime)
 
 ### news_articles 表
-- id: 主键
-- source_id: 外键 → news_sources.id
-- title: 标题
-- summary: 摘要
-- content: 内容（可选）
-- source: 来源
-- publish_time: 发布时间
-- url: 链接（去重用，唯一）
-- created_at: 入库时间
+- id (Integer, PK)
+- source_id (Integer, index)
+- title (String(500))
+- summary (String(1000))
+- content (String)
+- source (String(100))
+- publish_time (DateTime, nullable)
+- url (String(500), unique, index)
+- created_at (DateTime)
 
 ## 判重逻辑
 
@@ -144,7 +151,7 @@ Response: 直接返回 service 结果 (无 success_response 包装)
 
 ## 预设数据源
 
-- 大盘行情 (000001) - interval: 30
+- 上证指数 (000001) - interval: 30
 - 创业板指 (399006) - interval: 30
 - 科创50 (000688) - interval: 30
 - 贵州茅台 (600519) - interval: 60
@@ -156,8 +163,9 @@ Response: 直接返回 service 结果 (无 success_response 包装)
 
 ✅ 核心功能已完成
 
-## 遗留问题
+## 已知问题
 
 1. `GET /api/news` 的 `category` 参数未实现过滤逻辑。
 2. 新闻页面中"股票公告"和"宏观资讯"标签页为空实现/开发中提示。
 3. `POST /api/news/sources/{id}/fetch` 直接返回 service 结果，未统一使用 success_response 包装。
+4. `GET /api/news/sources` 直接返回数组，未统一使用 success_response 包装。

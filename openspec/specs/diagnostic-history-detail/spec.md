@@ -69,6 +69,6 @@ Response: 直接返回 dict (无 success_response 包装)
 
 ✅ 已完成 (合并到 ai-advice)
 
-## 遗留问题
+## 已知问题
 
 - `GET /api/ai/history` 和 `GET /api/ai/history/{id}` 直接返回数据，未统一使用 success_response 包装。

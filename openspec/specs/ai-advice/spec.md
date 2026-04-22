@@ -45,7 +45,7 @@ Response (success_response 包装):
   "message": "ok"
 }
 ```
-> **注意**: 成功时会自动保存诊断历史到 `diagnostic_history` 表。
+> **注意**: 成功时会自动保存诊断历史到 `diagnostic_history` 表。外层 `code: 0` 与 data 中的 `code` (股票代码) 命名相同，含义不同。
 
 ### 获取诊断历史列表
 ```
@@ -130,22 +130,22 @@ Response (success_response 包装):
 ## 数据模型
 
 ### diagnostic_history 表
-- id: 主键
-- stock_code: 股票代码
-- stock_name: 股票名称
-- fundamental_analysis: 基本面分析 (TEXT)
-- technical_analysis: 技术面分析 (TEXT)
-- risk_analysis: 风险评估 (TEXT)
-- final_report: 最终报告 (TEXT)
-- score: 评分/建议 (String(10))
-- created_at: 创建时间
+- id (Integer, PK)
+- stock_code (String(20), index)
+- stock_name (String(100))
+- fundamental_analysis (String)
+- technical_analysis (String)
+- risk_analysis (String)
+- final_report (String)
+- score (String(10))
+- created_at (DateTime)
 
 ## 状态
 
 ✅ 已完成
 
-## 遗留问题
+## 已知问题
 
-1. 同时存在 `GET /api/ai/analyze` 和 `POST /api/ai/analyze`，建议后续移除 GET 遗留端点。
+1. 同时存在 `GET /api/ai/analyze` 和 `POST /api/ai/analyze`。
 2. `GET /history` 和 `GET /history/{id}` 直接返回数据，未统一使用 success_response 包装。
-3. `POST /analyze` 的响应 data 中包含 `code` 字段（股票代码），与外层 `code: 0`（状态码）命名冲突，需注意解析。
+3. `POST /analyze` 的响应 data 中包含 `code` 字段（股票代码），与外层 `code: 0`（状态码）命名冲突。

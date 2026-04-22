@@ -34,14 +34,9 @@ Response: 直接返回 dict (无 success_response 包装)
 ```
 POST /api/portfolio
 ```
-> **注意**: 当前使用 query params 传递参数，未使用 BaseModel Request Body。不符合项目规范。
-
-Query params:
-- `stock_code`: 股票代码
-- `stock_name`: 股票名称
-- `quantity`: 数量
-- `cost_price`: 成本价
-- `buy_date`: 买入日期 (可选, 格式: YYYY-MM-DD)
+> **实现方式**: 使用 query params 传递参数 (`stock_code`, `stock_name`, `quantity`, `cost_price`, `buy_date`)，未使用 BaseModel Request Body。
+> 
+> **注意**: 前端 `Portfolio.tsx` 实际发送 JSON body，与后端接收方式不匹配。
 
 Response:
 ```json
@@ -61,8 +56,6 @@ Response:
 ```
 GET /api/portfolio/transactions?limit=50
 ```
-> **注意**: 实际路径为 `/api/portfolio/transactions`，非 `/api/transactions`。
-
 Response: 直接返回数组 (无 success_response 包装)
 ```json
 [
@@ -81,24 +74,24 @@ Response: 直接返回数组 (无 success_response 包装)
 ## 数据模型
 
 ### positions 表
-- id: 主键
-- stock_code: 股票代码
-- stock_name: 股票名称
-- quantity: 持仓数量
-- cost_price: 成本价
-- buy_date: 买入日期
-- created_at: 创建时间
+- id (Integer, PK)
+- stock_code (String(20), index)
+- stock_name (String(100))
+- quantity (Integer)
+- cost_price (Float)
+- buy_date (DateTime)
+- created_at (DateTime)
 
 ### transactions 表
-- id: 主键
-- stock_code: 股票代码
-- stock_name: 股票名称
-- type: 类型 (buy/sell)
-- quantity: 数量
-- price: 价格
-- commission: 佣金
-- trade_date: 交易日期
-- created_at: 创建时间
+- id (Integer, PK)
+- stock_code (String(20), index)
+- stock_name (String(100))
+- type (String(10))
+- quantity (Integer)
+- price (Float)
+- commission (Float, default=0)
+- trade_date (DateTime)
+- created_at (DateTime)
 
 ## 统计指标
 
@@ -113,7 +106,7 @@ Response: 直接返回数组 (无 success_response 包装)
 
 ✅ 已完成
 
-## 遗留问题
+## 已知问题
 
-1. `POST /api/portfolio` 应改为 BaseModel Request Body 以符合项目规范。
+1. `POST /api/portfolio` 使用 query params，未使用 BaseModel Request Body。前端实际发送 JSON body，前后端不匹配。
 2. `GET /api/portfolio` 和 `GET /api/portfolio/transactions` 直接返回数据，未统一使用 success_response 包装。

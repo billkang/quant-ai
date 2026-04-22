@@ -21,6 +21,8 @@ dependencies = [
     "alembic",
     "apscheduler",
     "requests",
+    "bcrypt",
+    "pyjwt",
     "langchain>=0.3.0",
     "langchain-openai>=0.2.0",
     "langgraph>=0.2.0",

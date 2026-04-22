@@ -153,6 +153,34 @@ export const handlers = [
   http.put('/api/quant/alerts/:id/read', () => {
     return HttpResponse.json({ code: 0, data: null })
   }),
+
+  http.post('/api/auth/login', async ({ request }) => {
+    const body = (await request.json()) as { username?: string; password?: string }
+    if (body.username === 'testuser' && body.password === 'testpass') {
+      return HttpResponse.json({
+        code: 0,
+        data: { access_token: 'mock-token-123', token_type: 'bearer', expires_in: 604800 },
+        message: '登录成功',
+      })
+    }
+    return HttpResponse.json({ detail: '用户名或密码错误' }, { status: 401 })
+  }),
+
+  http.post('/api/auth/register', async () => {
+    return HttpResponse.json({
+      code: 0,
+      data: { id: 1, username: 'testuser', access_token: 'mock-token-123', token_type: 'bearer' },
+      message: '注册成功',
+    })
+  }),
+
+  http.get('/api/auth/me', () => {
+    return HttpResponse.json({
+      code: 0,
+      data: { id: 1, username: 'testuser', email: 'test@example.com' },
+      message: 'ok',
+    })
+  }),
 ]
 
 export const server = setupServer(...handlers)

@@ -22,6 +22,7 @@ import {
   AreaChartOutlined,
   SafetyOutlined,
 } from '@ant-design/icons'
+import api from '../services/api'
 
 const { Text, Title } = Typography
 
@@ -55,9 +56,9 @@ export default function AIAdvice() {
   const [detailLoading, setDetailLoading] = useState(false)
 
   useEffect(() => {
-    fetch('/api/stocks/watchlist')
-      .then(res => res.json())
-      .then(data => setStocks(data))
+    api
+      .get('/stocks/watchlist')
+      .then(res => setStocks(Array.isArray(res.data) ? res.data : []))
       .catch(() => setStocks([]))
   }, [])
 
@@ -66,18 +67,18 @@ export default function AIAdvice() {
   }, [])
 
   const fetchHistory = () => {
-    fetch('/api/ai/history?limit=5')
-      .then(res => res.json())
-      .then(data => setHistory(data))
+    api
+      .get('/ai/history', { params: { limit: 5 } })
+      .then(res => setHistory(Array.isArray(res.data) ? res.data : []))
       .catch(() => setHistory([]))
   }
 
   const viewDetail = (id: number) => {
     setDetailLoading(true)
-    fetch(`/api/ai/history/${id}`)
-      .then(res => res.json())
-      .then(data => {
-        setDetailData(data)
+    api
+      .get(`/ai/history/${id}`)
+      .then(res => {
+        setDetailData(res.data)
         setDetailOpen(true)
       })
       .catch(() => message.error('获取详情失败'))
@@ -88,19 +89,22 @@ export default function AIAdvice() {
     if (!stockCode) return
     setLoading(true)
     setResult('')
-    fetch(`/api/ai/analyze`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: stockCode, dimensions: ['fundamental', 'technical', 'risk'] }),
-    })
-      .then(res => res.json())
-      .then(data => {
+    api
+      .post('/ai/analyze', { code: stockCode, dimensions: ['fundamental', 'technical', 'risk'] })
+      .then(res => {
+        const data = res.data
         if (data.detail) {
           message.error(data.detail)
           setResult('分析失败：' + data.detail)
-        } else {
-          setResult(data.finalReport || data.advice || '未获取到分析结果')
+          return
+        }
+        const result = data.data || data
+        const report = result.final_report || result.finalReport || result.advice || ''
+        if (report) {
+          setResult(report)
           fetchHistory()
+        } else {
+          setResult('未获取到分析结果')
         }
       })
       .catch(() => {

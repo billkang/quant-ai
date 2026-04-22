@@ -5,6 +5,18 @@ from sqlalchemy import JSON, Column, DateTime, Float, Integer, String
 from src.models.database import Base
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, index=True)
+    email = Column(String(100), unique=True)
+    password_hash = Column(String(255))
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class Stock(Base):
     __tablename__ = "stocks"
 
@@ -19,6 +31,7 @@ class Watchlist(Base):
     __tablename__ = "watchlist"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
     stock_code = Column(String(20), index=True)
     stock_name = Column(String(100))
     added_at = Column(DateTime, default=datetime.utcnow)
@@ -38,6 +51,7 @@ class Position(Base):
     __tablename__ = "positions"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
     stock_code = Column(String(20), index=True)
     stock_name = Column(String(100))
     quantity = Column(Integer)
@@ -50,6 +64,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
     stock_code = Column(String(20), index=True)
     stock_name = Column(String(100))
     type = Column(String(10))
@@ -91,6 +106,7 @@ class DiagnosticHistory(Base):
     __tablename__ = "diagnostic_history"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
     stock_code = Column(String(20), index=True)
     stock_name = Column(String(100))
     fundamental_analysis = Column(String)
@@ -169,6 +185,7 @@ class StrategyBacktest(Base):
     __tablename__ = "strategy_backtests"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
     strategy_name = Column(String(100), nullable=False)
     stock_code = Column(String(20), nullable=False)
     start_date = Column(DateTime, nullable=False)
@@ -186,10 +203,21 @@ class StrategyBacktest(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class ScreenerTemplate(Base):
+    __tablename__ = "screener_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    name = Column(String(100))
+    conditions = Column(JSON)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class Alert(Base):
     __tablename__ = "alerts"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
     stock_code = Column(String(20), nullable=False)
     alert_type = Column(String(50), nullable=False)
     condition = Column(String(200))

@@ -1,17 +1,22 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from src.api.auth import get_current_user
 from src.api.common import success_response
 from src.api.deps import _get_stock_by_code, get_db
 from src.models import crud
+from src.models.models import User
 from src.services.stock_data import stock_service
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
 
 
 @router.get("/watchlist")
-async def get_watchlist(db: Session = Depends(get_db)):
-    watchlist = crud.get_watchlist(db)
+async def get_watchlist(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    watchlist = crud.get_watchlist(db, user_id=user.id)
     if not watchlist:
         return []
     result = []
@@ -23,10 +28,17 @@ async def get_watchlist(db: Session = Depends(get_db)):
 
 
 @router.post("/watchlist")
-async def add_to_watchlist(stock_code: str, db: Session = Depends(get_db)):
+async def add_to_watchlist(
+    stock_code: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     existing = (
         db.query(crud.models.Watchlist)
-        .filter(crud.models.Watchlist.stock_code == stock_code)
+        .filter(
+            crud.models.Watchlist.stock_code == stock_code,
+            crud.models.Watchlist.user_id == user.id,
+        )
         .first()
     )
     if existing:
@@ -36,7 +48,7 @@ async def add_to_watchlist(stock_code: str, db: Session = Depends(get_db)):
     if not stock_info or not stock_info.get("name"):
         return success_response(message="无法获取股票信息")
 
-    crud.add_to_watchlist(db, stock_code, stock_info.get("name", ""))
+    crud.add_to_watchlist(db, stock_code, stock_info.get("name", ""), user_id=user.id)
 
     code_upper = stock_code.upper()
     period = "6mo"
@@ -51,8 +63,12 @@ async def add_to_watchlist(stock_code: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/watchlist/{stock_code}")
-async def remove_from_watchlist(stock_code: str, db: Session = Depends(get_db)):
-    crud.remove_from_watchlist(db, stock_code)
+async def remove_from_watchlist(
+    stock_code: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    crud.remove_from_watchlist(db, stock_code, user_id=user.id)
     return success_response()
 
 

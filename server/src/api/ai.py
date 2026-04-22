@@ -2,9 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from src.api.auth import get_current_user
 from src.api.common import success_response
 from src.api.deps import get_db, get_stock
 from src.models import crud
+from src.models.models import User
 from src.services.ai_analysis import ai_service
 from src.services.news import news_service
 
@@ -28,7 +30,11 @@ class AnalyzeV2Request(BaseModel):
 
 
 @router.post("/analyze")
-async def analyze_stock(req: AnalyzeV2Request, db: Session = Depends(get_db)):
+async def analyze_stock(
+    req: AnalyzeV2Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     stock = await get_stock(req.code)
     if not stock:
         raise HTTPException(status_code=404, detail="股票不存在")
@@ -48,6 +54,7 @@ async def analyze_stock(req: AnalyzeV2Request, db: Session = Depends(get_db)):
                 technical_analysis=result.get("technical_analysis", ""),
                 risk_analysis=result.get("risk_analysis", ""),
                 final_report=result.get("final_report", ""),
+                user_id=user.id,
             )
         except Exception:
             pass
@@ -58,8 +65,13 @@ async def analyze_stock(req: AnalyzeV2Request, db: Session = Depends(get_db)):
 
 
 @router.get("/history")
-async def get_diagnostic_history(code: str = None, limit: int = 10, db: Session = Depends(get_db)):
-    history = crud.get_diagnostic_history(db, code, limit)
+async def get_diagnostic_history(
+    code: str = None,
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    history = crud.get_diagnostic_history(db, code, limit, user_id=user.id)
     return [
         {
             "id": h.id,
@@ -74,8 +86,12 @@ async def get_diagnostic_history(code: str = None, limit: int = 10, db: Session 
 
 
 @router.get("/history/{history_id}")
-async def get_diagnostic_history_detail(history_id: int, db: Session = Depends(get_db)):
-    h = crud.get_diagnostic_history_by_id(db, history_id)
+async def get_diagnostic_history_detail(
+    history_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    h = crud.get_diagnostic_history_by_id(db, history_id, user_id=user.id)
     if not h:
         raise HTTPException(status_code=404, detail="诊断记录不存在")
     return {

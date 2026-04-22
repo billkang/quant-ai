@@ -34,7 +34,10 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   config => {
-    // Could add auth token here
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
     return config
   },
   error => Promise.reject(error)
@@ -47,6 +50,20 @@ api.interceptors.response.use(
     const status = error.response?.status
     const data = error.response?.data
     const message = data?.message || error.message || '请求失败'
+
+    // Handle authentication errors (401 / 422 missing Authorization)
+    if (
+      status === 401 ||
+      (status === 422 &&
+        data?.detail?.some?.((d: { loc?: string[] }) => d.loc?.includes('Authorization')))
+    ) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('username')
+      // Use full reload to ensure React Router picks up the login route cleanly
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
+    }
 
     // Log to console in dev; could send to Sentry in production
     console.error(`[API Error ${status}]`, message)

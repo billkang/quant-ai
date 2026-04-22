@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import { stockApi } from '../services/api'
 import {
   Card,
   Table,
@@ -50,7 +50,7 @@ export default function Dashboard() {
   const fetchWatchlist = async () => {
     try {
       setLoading(true)
-      const res = await axios.get('/api/stocks/watchlist')
+      const res = await stockApi.getWatchlist()
       setStocks(res.data || [])
     } catch (error) {
       console.error('Failed to fetch watchlist:', error)
@@ -62,12 +62,12 @@ export default function Dashboard() {
   const addStock = async () => {
     if (!newCode) return
     try {
-      const res = await axios.post(`/api/stocks/watchlist?stock_code=${newCode}`)
+      const res = await stockApi.addStock(newCode)
       if (res.data.status === 'error') {
         message.error(res.data.message || '添加失败')
         return
       }
-      message.success(`已添加 ${res.data.name}`)
+      message.success(`已添加 ${res.data.data?.name || newCode}`)
       setNewCode('')
       await fetchWatchlist()
     } catch {
@@ -157,7 +157,7 @@ export default function Dashboard() {
           description={`确定要从自选股中删除 ${record.name} 吗？`}
           onConfirm={async () => {
             try {
-              await axios.delete(`/api/stocks/watchlist/${record.code}`)
+              await stockApi.removeStock(record.code)
               message.success('删除成功')
               await fetchWatchlist()
             } catch {

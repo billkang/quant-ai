@@ -10,20 +10,28 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
 
-def get_watchlist(db: Session) -> list[models.Watchlist]:
-    return db.query(models.Watchlist).all()
+def get_watchlist(db: Session, user_id: int = None) -> list[models.Watchlist]:
+    query = db.query(models.Watchlist)
+    if user_id is not None:
+        query = query.filter(models.Watchlist.user_id == user_id)
+    return query.all()
 
 
-def add_to_watchlist(db: Session, stock_code: str, stock_name: str = "") -> models.Watchlist:
-    watch = models.Watchlist(stock_code=stock_code, stock_name=stock_name)
+def add_to_watchlist(
+    db: Session, stock_code: str, stock_name: str = "", user_id: int = None
+) -> models.Watchlist:
+    watch = models.Watchlist(stock_code=stock_code, stock_name=stock_name, user_id=user_id)
     db.add(watch)
     db.commit()
     db.refresh(watch)
     return watch
 
 
-def remove_from_watchlist(db: Session, stock_code: str) -> bool:
-    watch = db.query(models.Watchlist).filter(models.Watchlist.stock_code == stock_code).first()
+def remove_from_watchlist(db: Session, stock_code: str, user_id: int = None) -> bool:
+    query = db.query(models.Watchlist).filter(models.Watchlist.stock_code == stock_code)
+    if user_id is not None:
+        query = query.filter(models.Watchlist.user_id == user_id)
+    watch = query.first()
     if watch:
         db.delete(watch)
         db.commit()
@@ -57,12 +65,18 @@ def get_stock_kline(db: Session, stock_code: str, period: str) -> models.StockKl
     )
 
 
-def get_positions(db: Session) -> list[models.Position]:
-    return db.query(models.Position).all()
+def get_positions(db: Session, user_id: int = None) -> list[models.Position]:
+    query = db.query(models.Position)
+    if user_id is not None:
+        query = query.filter(models.Position.user_id == user_id)
+    return query.all()
 
 
-def delete_position(db: Session, stock_code: str) -> bool:
-    position = db.query(models.Position).filter(models.Position.stock_code == stock_code).first()
+def delete_position(db: Session, stock_code: str, user_id: int = None) -> bool:
+    query = db.query(models.Position).filter(models.Position.stock_code == stock_code)
+    if user_id is not None:
+        query = query.filter(models.Position.user_id == user_id)
+    position = query.first()
     if position:
         db.delete(position)
         db.commit()
@@ -71,7 +85,13 @@ def delete_position(db: Session, stock_code: str) -> bool:
 
 
 def add_position(
-    db: Session, stock_code: str, stock_name: str, quantity: int, cost_price: float, buy_date
+    db: Session,
+    stock_code: str,
+    stock_name: str,
+    quantity: int,
+    cost_price: float,
+    buy_date,
+    user_id: int = None,
 ) -> models.Position:
     position = models.Position(
         stock_code=stock_code,
@@ -79,6 +99,7 @@ def add_position(
         quantity=quantity,
         cost_price=cost_price,
         buy_date=buy_date,
+        user_id=user_id,
     )
     db.add(position)
     db.commit()
@@ -86,13 +107,11 @@ def add_position(
     return position
 
 
-def get_transactions(db: Session, limit: int = 50) -> list[models.Transaction]:
-    return (
-        db.query(models.Transaction)
-        .order_by(models.Transaction.trade_date.desc())
-        .limit(limit)
-        .all()
-    )
+def get_transactions(db: Session, limit: int = 50, user_id: int = None) -> list[models.Transaction]:
+    query = db.query(models.Transaction)
+    if user_id is not None:
+        query = query.filter(models.Transaction.user_id == user_id)
+    return query.order_by(models.Transaction.trade_date.desc()).limit(limit).all()
 
 
 def add_transaction(
@@ -104,6 +123,7 @@ def add_transaction(
     price: float,
     commission: float,
     trade_date,
+    user_id: int = None,
 ) -> models.Transaction:
     transaction = models.Transaction(
         stock_code=stock_code,
@@ -113,6 +133,7 @@ def add_transaction(
         price=price,
         commission=commission,
         trade_date=trade_date,
+        user_id=user_id,
     )
     db.add(transaction)
     db.commit()
@@ -230,6 +251,7 @@ def save_diagnostic_history(
     risk_analysis: str,
     final_report: str,
     score: str = None,
+    user_id: int = None,
 ) -> models.DiagnosticHistory:
     history = models.DiagnosticHistory(
         stock_code=stock_code,
@@ -239,6 +261,7 @@ def save_diagnostic_history(
         risk_analysis=risk_analysis,
         final_report=final_report,
         score=score,
+        user_id=user_id,
     )
     db.add(history)
     db.commit()
@@ -247,18 +270,23 @@ def save_diagnostic_history(
 
 
 def get_diagnostic_history(
-    db: Session, stock_code: str = None, limit: int = 10
+    db: Session, stock_code: str = None, limit: int = 10, user_id: int = None
 ) -> list[models.DiagnosticHistory]:
     query = db.query(models.DiagnosticHistory)
+    if user_id is not None:
+        query = query.filter(models.DiagnosticHistory.user_id == user_id)
     if stock_code:
         query = query.filter(models.DiagnosticHistory.stock_code == stock_code)
     return query.order_by(models.DiagnosticHistory.created_at.desc()).limit(limit).all()
 
 
-def get_diagnostic_history_by_id(db: Session, history_id: int) -> models.DiagnosticHistory | None:
-    return (
-        db.query(models.DiagnosticHistory).filter(models.DiagnosticHistory.id == history_id).first()
-    )
+def get_diagnostic_history_by_id(
+    db: Session, history_id: int, user_id: int = None
+) -> models.DiagnosticHistory | None:
+    query = db.query(models.DiagnosticHistory).filter(models.DiagnosticHistory.id == history_id)
+    if user_id is not None:
+        query = query.filter(models.DiagnosticHistory.user_id == user_id)
+    return query.first()
 
 
 # ---- Stock Daily Prices ----
@@ -413,26 +441,31 @@ def save_backtest(db: Session, **kwargs) -> models.StrategyBacktest:
     return backtest
 
 
-def get_backtests(db: Session, limit: int = 50):
-    return (
-        db.query(models.StrategyBacktest)
-        .order_by(models.StrategyBacktest.created_at.desc())
-        .limit(limit)
-        .all()
-    )
+def get_backtests(db: Session, limit: int = 50, user_id: int = None):
+    query = db.query(models.StrategyBacktest)
+    if user_id is not None:
+        query = query.filter(models.StrategyBacktest.user_id == user_id)
+    return query.order_by(models.StrategyBacktest.created_at.desc()).limit(limit).all()
 
 
-def get_backtest_by_id(db: Session, backtest_id: int):
-    return (
-        db.query(models.StrategyBacktest).filter(models.StrategyBacktest.id == backtest_id).first()
-    )
+def get_backtest_by_id(db: Session, backtest_id: int, user_id: int = None):
+    query = db.query(models.StrategyBacktest).filter(models.StrategyBacktest.id == backtest_id)
+    if user_id is not None:
+        query = query.filter(models.StrategyBacktest.user_id == user_id)
+    return query.first()
 
 
 # ---- Alerts ----
 
 
 def save_alert(
-    db: Session, stock_code: str, alert_type: str, condition: str, message: str, triggered_at=None
+    db: Session,
+    stock_code: str,
+    alert_type: str,
+    condition: str,
+    message: str,
+    triggered_at=None,
+    user_id: int = None,
 ):
     alert = models.Alert(
         stock_code=stock_code,
@@ -440,6 +473,7 @@ def save_alert(
         condition=condition,
         message=message,
         triggered_at=triggered_at,
+        user_id=user_id,
     )
     db.add(alert)
     db.commit()
@@ -447,15 +481,20 @@ def save_alert(
     return alert
 
 
-def get_alerts(db: Session, is_read=None, limit: int = 50):
+def get_alerts(db: Session, is_read=None, limit: int = 50, user_id: int = None):
     query = db.query(models.Alert)
+    if user_id is not None:
+        query = query.filter(models.Alert.user_id == user_id)
     if is_read is not None:
         query = query.filter(models.Alert.is_read == (1 if is_read else 0))
     return query.order_by(models.Alert.created_at.desc()).limit(limit).all()
 
 
-def mark_alert_read(db: Session, alert_id: int):
-    alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+def mark_alert_read(db: Session, alert_id: int, user_id: int = None):
+    query = db.query(models.Alert).filter(models.Alert.id == alert_id)
+    if user_id is not None:
+        query = query.filter(models.Alert.user_id == user_id)
+    alert = query.first()
     if alert:
         alert.is_read = 1
         db.commit()
@@ -463,5 +502,8 @@ def mark_alert_read(db: Session, alert_id: int):
     return False
 
 
-def get_unread_alert_count(db: Session):
-    return db.query(models.Alert).filter(models.Alert.is_read == 0).count()
+def get_unread_alert_count(db: Session, user_id: int = None):
+    query = db.query(models.Alert).filter(models.Alert.is_read == 0)
+    if user_id is not None:
+        query = query.filter(models.Alert.user_id == user_id)
+    return query.count()

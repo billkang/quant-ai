@@ -52,13 +52,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             except Exception:
                 pass
         else:
-            self.requests[client_ip] = [t for t in self.requests[client_ip] if now - t < window]
-            if len(self.requests[client_ip]) >= limit:
+            key = f"{client_ip}:{path}"
+            self.requests[key] = [t for t in self.requests[key] if now - t < window]
+            if len(self.requests[key]) >= limit:
                 return Response(
                     content='{"code": 429, "message": "请求过于频繁，请稍后再试"}',
                     status_code=429,
                     media_type="application/json",
                 )
-            self.requests[client_ip].append(now)
+            self.requests[key].append(now)
 
         return await call_next(request)

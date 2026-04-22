@@ -8,8 +8,8 @@
 
 | 组件 | 技术 |
 |------|------|
-| A股数据 | AkShare |
-| 港股/美股数据 | yfinance |
+| A股数据 | AkShare (Eastmoney API) |
+| 港股/美股数据 | yfinance (Yahoo Finance API) |
 | K线存储 | PostgreSQL (stock_kline 表) |
 | 实时缓存 | Redis (60s TTL) |
 
@@ -30,9 +30,10 @@ Response: 直接返回数组 (无 success_response 包装)
 ```
 POST /api/stocks/watchlist?stock_code=600519
 ```
-> **注意**: 当前使用 query param 传递参数，未使用 BaseModel Request Body。添加成功后会自动拉取并保存 K线数据 (period=6mo)。
+> **实现方式**: 使用 query param `stock_code` 传递参数，未使用 BaseModel Request Body。
+> 添加成功后会自动拉取并保存 K线数据 (period=6mo)。
 
-Response:
+Response (success_response 包装):
 ```json
 {
   "code": 0,
@@ -66,41 +67,37 @@ Response: 直接返回 dict (无 success_response 包装)
   "volume": 125000000
 }
 ```
-> 字段名和结构取决于 akshare/yfinance 原始返回。
+> 字段名和结构取决于 akshare/yfinance 原始返回。A股通过 Eastmoney API 获取，港股/美股通过 Yahoo Finance 获取。
 
 ### 获取 K 线
 ```
 GET /api/stocks/600519/kline?period=daily
 ```
-支持周期: daily, weekly, monthly, 1mo, 6mo, 1y (后端透传给数据源)
+支持周期: daily, weekly, monthly (A股); 1d, 1mo, 3mo, 6mo, 1y (港股/美股)
 Response: 直接返回 K线数组
 
 ## 数据模型
 
 ### stocks 表
-- id: 主键
-- code: 股票代码 (唯一)
-- name: 股票名称
-- market: 市场 (A/HK/US)
-- created_at: 创建时间
+- id (Integer, PK)
+- code (String(20), unique, index)
+- name (String(100))
+- market (String(10))
+- created_at (DateTime)
 
 ### watchlist 表
-- id: 主键
-- stock_code: 股票代码
-- stock_name: 股票名称
-- added_at: 添加时间
+- id (Integer, PK)
+- stock_code (String(20), index)
+- stock_name (String(100))
+- added_at (DateTime)
 
 ### stock_kline 表
-- id: 主键
-- stock_code: 股票代码
-- period: 周期
-- data: K线数据 (JSON)
-- updated_at: 更新时间
+- id (Integer, PK)
+- stock_code (String(20), index)
+- period (String(10))
+- data (JSON)
+- updated_at (DateTime)
 
 ## 状态
 
 ✅ 已完成
-
-## 遗留问题
-
-- `POST /api/stocks/watchlist` 应改为 BaseModel Request Body 以符合项目规范。

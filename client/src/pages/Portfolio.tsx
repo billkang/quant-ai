@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import { portfolioApi } from '../services/api'
 import {
   Card,
   Table,
@@ -70,7 +70,7 @@ export default function Portfolio() {
   const fetchPortfolio = async () => {
     try {
       setLoading(true)
-      const res = await axios.get('/api/portfolio')
+      const res = await portfolioApi.getPortfolio()
       setData(res.data || { positions: [], totalValue: 0, totalCost: 0, totalProfit: 0 })
     } catch (error) {
       console.error('Failed to fetch portfolio:', error)
@@ -91,7 +91,7 @@ export default function Portfolio() {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields()
-      await axios.post('/api/portfolio', {
+      await portfolioApi.addPosition({
         stock_code: values.stock_code,
         stock_name: values.stock_name || values.stock_code,
         quantity: values.quantity,
@@ -107,7 +107,7 @@ export default function Portfolio() {
 
   const confirmDelete = async () => {
     try {
-      await axios.delete(`/api/portfolio/${deleteConfirm.code}`)
+      await portfolioApi.deletePosition(deleteConfirm.code)
       setDeleteConfirm({ show: false, code: '', name: '' })
       await fetchPortfolio()
     } catch (error) {

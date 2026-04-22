@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = ""
     DOCS_USERNAME: str = ""
     DOCS_PASSWORD: str = ""
+    SECRET_KEY: str = "change-me-in-production"
 
 
 settings = Settings()

@@ -5,9 +5,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from src.api.auth import get_current_user
 from src.api.common import success_response
 from src.api.deps import get_db
 from src.models import crud
+from src.models.models import User
 from src.services.backtest_service import backtest_service
 from src.services.fundamental_service import fundamental_service
 
@@ -135,7 +137,11 @@ class BacktestRequest(BaseModel):
 
 
 @router.post("/backtest")
-async def run_backtest(req: BacktestRequest, db: Session = Depends(get_db)):
+async def run_backtest(
+    req: BacktestRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     result = backtest_service.run(
         strategy_name=req.strategy,
         stock_code=req.stockCode,
@@ -147,6 +153,7 @@ async def run_backtest(req: BacktestRequest, db: Session = Depends(get_db)):
     )
     backtest = crud.save_backtest(
         db=db,
+        user_id=user.id,
         strategy_name=req.strategy,
         stock_code=req.stockCode,
         start_date=datetime.strptime(req.startDate, "%Y-%m-%d"),
@@ -171,8 +178,12 @@ async def run_backtest(req: BacktestRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/backtests")
-async def get_backtests(limit: int = 50, db: Session = Depends(get_db)):
-    backtests = crud.get_backtests(db, limit)
+async def get_backtests(
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    backtests = crud.get_backtests(db, limit, user_id=user.id)
     return success_response(
         data=[
             {
@@ -194,8 +205,12 @@ async def get_backtests(limit: int = 50, db: Session = Depends(get_db)):
 
 
 @router.get("/backtests/{backtest_id}")
-async def get_backtest_detail(backtest_id: int, db: Session = Depends(get_db)):
-    b = crud.get_backtest_by_id(db, backtest_id)
+async def get_backtest_detail(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    b = crud.get_backtest_by_id(db, backtest_id, user_id=user.id)
     if not b:
         return success_response(data=None)
     return success_response(
@@ -234,8 +249,13 @@ async def portfolio_analysis(db: Session = Depends(get_db)):
 
 
 @router.get("/alerts")
-async def get_alerts(is_read: bool | None = None, limit: int = 50, db: Session = Depends(get_db)):
-    alerts = crud.get_alerts(db, is_read, limit)
+async def get_alerts(
+    is_read: bool | None = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    alerts = crud.get_alerts(db, is_read, limit, user_id=user.id)
     return success_response(
         data=[
             {
@@ -261,7 +281,11 @@ class AlertRuleRequest(BaseModel):
 
 
 @router.post("/alerts/rules")
-async def create_alert_rule(req: AlertRuleRequest, db: Session = Depends(get_db)):
+async def create_alert_rule(
+    req: AlertRuleRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     # For now, just save as an alert triggered immediately
     alert = crud.save_alert(
         db=db,
@@ -270,11 +294,16 @@ async def create_alert_rule(req: AlertRuleRequest, db: Session = Depends(get_db)
         condition=req.condition,
         message=req.message,
         triggered_at=datetime.now(),
+        user_id=user.id,
     )
     return success_response(data={"id": alert.id})
 
 
 @router.put("/alerts/{alert_id}/read")
-async def mark_alert_read(alert_id: int, db: Session = Depends(get_db)):
-    crud.mark_alert_read(db, alert_id)
+async def mark_alert_read(
+    alert_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    crud.mark_alert_read(db, alert_id, user_id=user.id)
     return success_response()
