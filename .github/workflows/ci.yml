@@ -103,10 +103,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Create server .env file
+        run: |
+          cat > server/.env << 'EOF'
+          DATABASE_URL=postgresql://quantai:quantai123@postgres:5432/quant_ai
+          REDIS_URL=redis://redis:6379/0
+          AI_API_KEY=test-key
+          SECRET_KEY=test-secret
+          E2E_SEED_ENABLED=true
+          EOF
+
       - name: Start E2E stack
         run: docker compose --profile e2e up --build --exit-code-from playwright
-        env:
-          E2E_SEED_ENABLED: "true"
 
       - name: Upload Playwright report
         if: failure()
