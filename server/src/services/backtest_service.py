@@ -237,7 +237,7 @@ class BacktestService:
 
     def _calc_max_drawdown(self, equity_values: list[float]) -> float:
         peak = equity_values[0]
-        max_dd = 0
+        max_dd = 0.0
         for val in equity_values:
             if val > peak:
                 peak = val

@@ -1,3 +1,5 @@
+from typing import cast
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -82,7 +84,7 @@ async def analyze_stock(
                 technical_analysis=result.get("technical_analysis", ""),
                 risk_analysis=result.get("risk_analysis", ""),
                 final_report=result.get("final_report", ""),
-                user_id=user.id,
+                user_id=cast(int, user.id),
             )
         except Exception:
             pass
@@ -99,7 +101,7 @@ async def get_diagnostic_history(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    history = crud.get_diagnostic_history(db, code, limit, user_id=user.id)
+    history = crud.get_diagnostic_history(db, code, limit, user_id=cast(int, user.id))
     return [
         {
             "id": h.id,
@@ -119,7 +121,7 @@ async def get_diagnostic_history_detail(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    h = crud.get_diagnostic_history_by_id(db, history_id, user_id=user.id)
+    h = crud.get_diagnostic_history_by_id(db, history_id, user_id=cast(int, user.id))
     if not h:
         raise HTTPException(status_code=404, detail="诊断记录不存在")
     return {

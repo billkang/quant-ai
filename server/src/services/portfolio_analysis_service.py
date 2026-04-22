@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 import pandas as pd
 
@@ -21,7 +23,7 @@ class PortfolioAnalysisService:
         price_data = {}
         stock_codes = []
         for pos in positions:
-            code = pos.stock_code
+            code = cast(str, pos.stock_code)
             klines = stock_service.get_a_stock_kline(code, "daily")
             if klines:
                 df = pd.DataFrame(klines)

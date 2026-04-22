@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import cast
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -18,21 +19,23 @@ async def get_portfolio(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    positions = crud.get_positions(db, user_id=user.id)
+    positions = crud.get_positions(db, user_id=cast(int, user.id))
     result = []
-    total_value = 0
-    total_cost = 0
+    total_value = 0.0
+    total_cost = 0.0
 
     for pos in positions:
-        code = pos.stock_code
+        code = cast(str, pos.stock_code)
         if code.isdigit() and len(code) == 6:
             current = stock_service.get_a_stock_quote(code)
         else:
             current = stock_service.get_hk_stock_quote(code)
 
         current_price = current.get("price", 0) if current else 0
-        value = current_price * pos.quantity
-        cost = pos.cost_price * pos.quantity
+        quantity = cast(int, pos.quantity)
+        cost_price = cast(float, pos.cost_price)
+        value = current_price * quantity
+        cost = cost_price * quantity
         profit = value - cost
         profit_percent = (profit / cost * 100) if cost > 0 else 0
 
@@ -69,7 +72,9 @@ async def add_position(
     user: User = Depends(get_current_user),
 ):
     date = datetime.strptime(buy_date, "%Y-%m-%d") if buy_date else datetime.now()
-    crud.add_position(db, stock_code, stock_name, quantity, cost_price, date, user_id=user.id)
+    crud.add_position(
+        db, stock_code, stock_name, quantity, cost_price, date, user_id=cast(int, user.id)
+    )
     return success_response()
 
 
@@ -79,7 +84,7 @@ async def delete_position(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    crud.delete_position(db, stock_code, user_id=user.id)
+    crud.delete_position(db, stock_code, user_id=cast(int, user.id))
     return success_response()
 
 
@@ -89,7 +94,7 @@ async def get_transactions(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    transactions = crud.get_transactions(db, limit, user_id=user.id)
+    transactions = crud.get_transactions(db, limit, user_id=cast(int, user.id))
     return [
         {
             "code": t.stock_code,

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -183,7 +183,7 @@ async def get_backtests(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    backtests = crud.get_backtests(db, limit, user_id=user.id)
+    backtests = crud.get_backtests(db, limit, user_id=cast(int, user.id))
     return success_response(
         data=[
             {
@@ -210,7 +210,7 @@ async def get_backtest_detail(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    b = crud.get_backtest_by_id(db, backtest_id, user_id=user.id)
+    b = crud.get_backtest_by_id(db, backtest_id, user_id=cast(int, user.id))
     if not b:
         return success_response(data=None)
     return success_response(
@@ -255,7 +255,7 @@ async def get_alerts(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    alerts = crud.get_alerts(db, is_read, limit, user_id=user.id)
+    alerts = crud.get_alerts(db, is_read, limit, user_id=cast(int, user.id))
     return success_response(
         data=[
             {
@@ -294,7 +294,7 @@ async def create_alert_rule(
         condition=req.condition,
         message=req.message,
         triggered_at=datetime.now(),
-        user_id=user.id,
+        user_id=cast(int, user.id),
     )
     return success_response(data={"id": alert.id})
 
@@ -305,5 +305,5 @@ async def mark_alert_read(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    crud.mark_alert_read(db, alert_id, user_id=user.id)
+    crud.mark_alert_read(db, alert_id, user_id=cast(int, user.id))
     return success_response()

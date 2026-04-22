@@ -33,6 +33,7 @@ dev = [
     "pytest",
     "ruff",
     "mypy",
+    "types-requests",
 ]
 
 [tool.pytest.ini_options]

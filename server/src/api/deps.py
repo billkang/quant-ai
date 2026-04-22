@@ -1,4 +1,5 @@
 import json
+from typing import cast
 
 import redis
 
@@ -27,7 +28,7 @@ async def get_stock(code: str) -> dict | None:
     cache_key = f"stock:{code}"
     cached = redis_client.get(cache_key)
     if cached:
-        return json.loads(cached)
+        return json.loads(cast(str, cached))
 
     stock = _get_stock_by_code(code)
 

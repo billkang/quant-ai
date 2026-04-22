@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import cast
 
 import bcrypt
 import jwt
@@ -104,7 +105,7 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login")
 async def login(req: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == req.username).first()
-    if not user or not _verify_password(req.password, user.password_hash):
+    if not user or not _verify_password(req.password, cast(str, user.password_hash)):
         raise HTTPException(status_code=401, detail="用户名或密码错误")
 
     token = _create_access_token({"sub": str(user.id)})
@@ -136,9 +137,9 @@ async def change_password(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if not _verify_password(req.old_password, user.password_hash):
+    if not _verify_password(req.old_password, cast(str, user.password_hash)):
         raise HTTPException(status_code=400, detail="原密码错误")
 
-    user.password_hash = _hash_password(req.new_password)
+    user.password_hash = _hash_password(req.new_password)  # type: ignore[assignment]
     db.commit()
     return success_response(message="密码修改成功")

@@ -1,3 +1,5 @@
+from typing import cast
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -16,12 +18,12 @@ async def get_watchlist(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    watchlist = crud.get_watchlist(db, user_id=user.id)
+    watchlist = crud.get_watchlist(db, user_id=cast(int, user.id))
     if not watchlist:
         return []
     result = []
     for watch in watchlist:
-        stock = _get_stock_by_code(watch.stock_code)
+        stock = _get_stock_by_code(cast(str, watch.stock_code))
         if stock:
             result.append(stock)
     return result
@@ -37,7 +39,7 @@ async def add_to_watchlist(
         db.query(crud.models.Watchlist)
         .filter(
             crud.models.Watchlist.stock_code == stock_code,
-            crud.models.Watchlist.user_id == user.id,
+            crud.models.Watchlist.user_id == cast(int, user.id),
         )
         .first()
     )
@@ -48,7 +50,7 @@ async def add_to_watchlist(
     if not stock_info or not stock_info.get("name"):
         return success_response(message="无法获取股票信息")
 
-    crud.add_to_watchlist(db, stock_code, stock_info.get("name", ""), user_id=user.id)
+    crud.add_to_watchlist(db, stock_code, stock_info.get("name", ""), user_id=cast(int, user.id))
 
     code_upper = stock_code.upper()
     period = "6mo"
@@ -68,7 +70,7 @@ async def remove_from_watchlist(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    crud.remove_from_watchlist(db, stock_code, user_id=user.id)
+    crud.remove_from_watchlist(db, stock_code, user_id=cast(int, user.id))
     return success_response()
 
 

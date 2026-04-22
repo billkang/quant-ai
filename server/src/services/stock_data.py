@@ -17,7 +17,7 @@ PROXY = _get_proxy()
 
 class StockDataService:
     _spot_cache = None
-    _cache_time = 0
+    _cache_time = 0.0
     CACHE_TTL = 60
 
     def get_a_stock_quote(self, symbol: str) -> dict | None:
@@ -26,7 +26,7 @@ class StockDataService:
             if self._spot_cache is None or now - self._cache_time > self.CACHE_TTL:
                 resp = requests.get(
                     "https://push2.eastmoney.com/api/qt/clist/get",
-                    params={
+                    params={  # type: ignore[arg-type]
                         "pn": 1,
                         "pz": 5000,
                         "po": 1,
@@ -102,7 +102,7 @@ class StockDataService:
             p = period_map.get(period, "101")
             resp = requests.get(
                 "https://push2his.eastmoney.com/api/qt/stock/kline/get",
-                params={
+                params={  # type: ignore[arg-type]
                     "secid": f"1.{symbol}",
                     "fields1": "f1,f2,f3,f4,f5,f6",
                     "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",

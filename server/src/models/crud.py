@@ -216,9 +216,9 @@ def save_news_article(
     title: str,
     summary: str,
     source: str,
-    publish_time: datetime,
+    publish_time: datetime | None,
     url: str,
-    content: str = None,
+    content: str | None = None,
 ) -> models.NewsArticle:
     article = models.NewsArticle(
         source_id=source_id,

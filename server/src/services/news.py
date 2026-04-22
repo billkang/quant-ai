@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import cast
 
 import akshare as ak
 from sqlalchemy.orm import Session
@@ -32,7 +33,7 @@ class NewsService:
                     db.commit()
                     db.refresh(source)
 
-                self.fetch_and_save_news(db, source.id)
+                self.fetch_and_save_news(db, cast(int, source.id))
                 articles = crud.get_news_articles(db, symbol=symbol, limit=limit)
 
             return [
@@ -56,7 +57,7 @@ class NewsService:
 
         if source.last_fetched_at:
             elapsed = datetime.utcnow() - source.last_fetched_at
-            if elapsed < timedelta(minutes=source.interval_minutes):
+            if elapsed < timedelta(minutes=cast(int, source.interval_minutes)):
                 return {
                     "status": "ok",
                     "skipped": 1,
