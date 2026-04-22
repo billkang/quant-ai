@@ -25,8 +25,16 @@ cd server && PYTHONPATH=. uvicorn src.main:app --reload
 # Database migrations
 docker-compose exec server alembic upgrade head
 
-# E2E tests
+# Backend E2E tests (API integration tests)
 cd server && PYTHONPATH=. pytest tests/e2e/ -v
+
+# Playwright E2E tests (browser E2E tests)
+cd client && pnpm exec playwright install chromium   # One-time browser install
+cd client && pnpm run test:e2e                       # Headless run
+cd client && pnpm run test:e2e:ui                    # Interactive UI mode
+
+# Docker E2E (full stack)
+E2E_SEED_ENABLED=true docker compose --profile e2e up --build --exit-code-from playwright
 
 # Data Pipeline (Scheduler jobs run automatically in Docker)
 # Manual trigger via API:
@@ -83,8 +91,12 @@ curl http://localhost:8000/api/quant/alerts
 ### Running tests
 
 ```bash
-# E2E tests (Docker PostgreSQL container, auto-managed)
+# Backend E2E tests (Docker PostgreSQL container, auto-managed)
 cd server && PYTHONPATH=. pytest tests/e2e/ -v
+
+# Playwright browser E2E tests
+cd client && pnpm run test:e2e
+cd client && pnpm run test:e2e:ui
 
 # Unit tests only (no Docker required)
 cd server && PYTHONPATH=. pytest tests/ -v --ignore=tests/e2e
@@ -92,11 +104,13 @@ cd server && PYTHONPATH=. pytest tests/ -v --ignore=tests/e2e
 # All backend tests
 cd server && PYTHONPATH=. pytest -v
 
-# Frontend tests
+# Frontend unit tests
 cd client && pnpm run test
 ```
 
-> **Note**: E2E tests require a local Docker daemon. They start a temporary `postgres:16-alpine` container, run alembic migrations, execute tests with transaction isolation, and destroy the container on teardown.
+> **Note**: Backend E2E tests require a local Docker daemon. They start a temporary `postgres:16-alpine` container, run alembic migrations, execute tests with transaction isolation, and destroy the container on teardown.
+>
+> Playwright E2E tests require the full application stack running (PostgreSQL, Redis, server, client). Use `docker compose --profile e2e up --build` to run them in a containerized environment, or start the services manually and run `pnpm run test:e2e` locally.
 
 ## Testing Changes
 

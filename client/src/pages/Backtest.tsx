@@ -251,6 +251,7 @@ export default function Backtest() {
             <span style={{ fontWeight: 600 }}>回测配置</span>
           </Space>
         }
+        data-testid="backtest-config-card"
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
@@ -291,6 +292,7 @@ export default function Backtest() {
               icon={<PlayCircleOutlined />}
               onClick={handleRun}
               loading={loading}
+              data-testid="backtest-run-btn"
             >
               运行回测
             </Button>

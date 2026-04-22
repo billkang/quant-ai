@@ -96,6 +96,43 @@ services:
       options:
         max-size: "5m"
         max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Playwright E2E 测试服务
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.59.1-jammy
+    container_name: quant-ai-playwright
+    working_dir: /app
+    volumes:
+      - ./client:/app
+    environment:
+      - CI=true
+      - PLAYWRIGHT_BASE_URL=http://client
+      - PLAYWRIGHT_BASE_URL_API=http://server:8000
+    depends_on:
+      server:
+        condition: service_healthy
+      client:
+        condition: service_healthy
+    profiles:
+      - e2e
+    command: >
+      bash -c "
+        npm install -g pnpm &&
+        pnpm install --frozen-lockfile &&
+        npx playwright install chromium &&
+        pnpm run test:e2e
+      "
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
 
 volumes:
   postgres_data:

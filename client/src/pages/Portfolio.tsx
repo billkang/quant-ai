@@ -491,11 +491,17 @@ export default function Portfolio() {
           </Space>
         }
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowAdd(true)}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setShowAdd(true)}
+            data-testid="portfolio-add-btn"
+          >
             记录交易
           </Button>
         }
         bodyStyle={{ padding: 0 }}
+        data-testid="portfolio-holdings-card"
       >
         {loading ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
@@ -521,7 +527,7 @@ export default function Portfolio() {
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="stock_code" label="股票代码" rules={[{ required: true }]}>
-            <Input placeholder="如：600519" />
+            <Input placeholder="如：600519" data-testid="portfolio-modal-stock-code" />
           </Form.Item>
           <Form.Item name="stock_name" label="股票名称">
             <Input placeholder="如：贵州茅台" />
@@ -535,10 +541,21 @@ export default function Portfolio() {
             />
           </Form.Item>
           <Form.Item name="quantity" label="数量" rules={[{ required: true }]}>
-            <InputNumber style={{ width: '100%' }} min={1} placeholder="100" />
+            <InputNumber
+              style={{ width: '100%' }}
+              min={1}
+              placeholder="100"
+              data-testid="portfolio-modal-quantity"
+            />
           </Form.Item>
           <Form.Item name="cost_price" label="价格" rules={[{ required: true }]}>
-            <InputNumber style={{ width: '100%' }} min={0.01} precision={2} placeholder="100.00" />
+            <InputNumber
+              style={{ width: '100%' }}
+              min={0.01}
+              precision={2}
+              placeholder="100.00"
+              data-testid="portfolio-modal-price"
+            />
           </Form.Item>
         </Form>
       </Modal>

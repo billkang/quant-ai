@@ -200,11 +200,17 @@ export default function Alerts() {
           </Space>
         }
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowAdd(true)}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setShowAdd(true)}
+            data-testid="alerts-add-rule-btn"
+          >
             添加规则
           </Button>
         }
         bodyStyle={{ padding: 0 }}
+        data-testid="alerts-table-card"
       >
         <Table
           columns={columns}
@@ -213,6 +219,7 @@ export default function Alerts() {
           loading={loading}
           pagination={{ pageSize: 20, size: 'small' }}
           size="small"
+          data-testid="alerts-table"
         />
       </Card>
 

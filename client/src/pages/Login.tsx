@@ -80,13 +80,30 @@ export default function Login() {
       children: (
         <Form onFinish={handleLogin} layout="vertical">
           <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-            <Input prefix={<UserOutlined />} placeholder="用户名" size="large" />
+            <Input
+              prefix={<UserOutlined />}
+              placeholder="用户名"
+              size="large"
+              data-testid="login-username"
+            />
           </Form.Item>
           <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="密码" size="large" />
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="密码"
+              size="large"
+              data-testid="login-password"
+            />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} block size="large">
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={loading}
+              block
+              size="large"
+              data-testid="login-submit"
+            >
               登录
             </Button>
           </Form.Item>
@@ -99,7 +116,12 @@ export default function Login() {
       children: (
         <Form onFinish={handleRegister} layout="vertical">
           <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-            <Input prefix={<UserOutlined />} placeholder="用户名" size="large" />
+            <Input
+              prefix={<UserOutlined />}
+              placeholder="用户名"
+              size="large"
+              data-testid="register-username"
+            />
           </Form.Item>
           <Form.Item
             name="email"
@@ -108,13 +130,30 @@ export default function Login() {
               { type: 'email', message: '请输入有效的邮箱' },
             ]}
           >
-            <Input prefix={<MailOutlined />} placeholder="邮箱" size="large" />
+            <Input
+              prefix={<MailOutlined />}
+              placeholder="邮箱"
+              size="large"
+              data-testid="register-email"
+            />
           </Form.Item>
           <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="密码" size="large" />
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="密码"
+              size="large"
+              data-testid="register-password"
+            />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} block size="large">
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={loading}
+              block
+              size="large"
+              data-testid="register-submit"
+            >
               注册
             </Button>
           </Form.Item>
@@ -140,7 +179,13 @@ export default function Login() {
           </Title>
           <Text type="secondary">智能量化平台</Text>
         </div>
-        <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} centered />
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={tabItems}
+          centered
+          data-testid="auth-tabs"
+        />
       </Card>
     </div>
   )

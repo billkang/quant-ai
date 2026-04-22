@@ -338,6 +338,7 @@ export default function Dashboard() {
             onChange={e => setNewCode(e.target.value)}
             onPressEnter={addStock}
             size="large"
+            data-testid="dashboard-add-stock-input"
             style={{
               flex: 1,
               borderRadius: 'var(--radius-sm)',
@@ -353,6 +354,7 @@ export default function Dashboard() {
             disabled={!newCode}
             size="large"
             style={{ borderRadius: 'var(--radius-sm)', minWidth: 120 }}
+            data-testid="dashboard-add-stock-btn"
           >
             添加
           </Button>
@@ -415,6 +417,7 @@ export default function Dashboard() {
             dataSource={stocks}
             rowKey="code"
             pagination={false}
+            data-testid="dashboard-watchlist-table"
             onRow={record => ({
               onClick: () => navigate(`/stock/${record.code}`),
               style: { cursor: 'pointer' },

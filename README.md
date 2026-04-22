@@ -117,16 +117,16 @@ alembic upgrade head
 
 ## 测试
 
-### 单元测试
+### 后端单元测试
 
 ```bash
 cd server
 PYTHONPATH=. pytest tests/ -v --ignore=tests/e2e
 ```
 
-### E2E 测试（端到端）
+### 后端 E2E 测试（API 集成测试）
 
-E2E 测试使用 **Docker PostgreSQL 临时容器**（testcontainers 模式），自动启动、迁移、销毁，无需手动准备数据库。
+使用 FastAPI `TestClient` 对后端 API 进行集成测试。依赖 **Docker PostgreSQL 临时容器**，自动启动、迁移、销毁。
 
 ```bash
 cd server
@@ -137,9 +137,56 @@ PYTHONPATH=. pytest tests/e2e/ -v
 1. 自动拉取并启动 `postgres:16-alpine` 临时容器
 2. 对该容器运行 `alembic upgrade head` 创建表结构
 3. 每个测试在独立事务中执行，结束后回滚，互不干扰
-4. 全部测试完成后自动 `docker stop` 销毁容器
+4. 全部测试完成后自动销毁容器
 
-> **注意**：运行 e2e 测试需要本地 Docker 守护进程可用。
+> **注意**：需要本地 Docker 守护进程可用。
+
+### 前端 E2E 测试（Playwright 浏览器测试）
+
+基于 [Playwright](https://playwright.dev) 的真实浏览器端到端测试，覆盖完整的用户交互流程。
+
+#### 安装浏览器（首次）
+
+```bash
+cd client
+pnpm exec playwright install chromium
+```
+
+#### 本地运行
+
+```bash
+#  headed 模式（有界面）
+cd client && pnpm run test:e2e
+
+# UI 模式（交互式调试）
+cd client && pnpm run test:e2e:ui
+```
+
+#### Docker 运行（完整栈）
+
+```bash
+# 启动 PostgreSQL + Redis + Server + Client + Playwright
+E2E_SEED_ENABLED=true docker compose --profile e2e up --build --exit-code-from playwright
+```
+
+#### 测试范围
+
+| 测试文件 | 覆盖功能 |
+|---------|---------|
+| `e2e/auth.spec.ts` | 注册、登录、登出、受保护路由 |
+| `e2e/dashboard.spec.ts` | Dashboard 加载、导航菜单 |
+| `e2e/screener.spec.ts` | 智能选股、筛选条件 |
+| `e2e/portfolio.spec.ts` | 持仓管理、添加交易 |
+| `e2e/quant.spec.ts` | 策略回测 |
+| `e2e/ai-chat.spec.ts` | AI 智能诊断 |
+| `e2e/notifications.spec.ts` | 告警中心、通知 badge |
+
+#### 调试
+
+测试失败时自动保存：
+- **截图**：`client/test-results/`
+- **视频**：`client/playwright-report/`
+- **Trace**：运行 `npx playwright show-report` 查看
 
 ## Lint 检查
 
@@ -161,6 +208,7 @@ pnpm run lint
 - **数据源**: AkShare + yfinance
 - **AI**: DeepSeek API
 - **Lint**: Ruff + ESLint
+- **E2E 测试**: Playwright
 
 ## 项目结构
 
@@ -185,6 +233,7 @@ quant-ai/
 │   │   ├── pages/       # 页面组件
 │   │   ├── components/  # 公共组件
 │   │   └── services/    # API 客户端
+│   ├── e2e/             # Playwright E2E 测试
 │   ├── package.json
 │   └── Dockerfile
 └── openclaw-skills/     # OpenClaw Skill

@@ -167,6 +167,7 @@ export default function Layout() {
           {/* 告警入口 */}
           <Link
             to="/alerts"
+            data-testid="nav-alerts"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -206,6 +207,7 @@ export default function Layout() {
           {/* 主题切换 */}
           <Dropdown menu={{ items: themeMenuItems }} placement="bottomRight" arrow>
             <button
+              data-testid="theme-toggle"
               aria-label="切换主题"
               style={{
                 display: 'flex',
@@ -236,6 +238,7 @@ export default function Layout() {
           {/* 用户信息 */}
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
             <button
+              data-testid="user-menu"
               aria-label="用户菜单"
               style={{
                 display: 'flex',
@@ -289,6 +292,7 @@ export default function Layout() {
                 <Link
                   key={item.key}
                   to={item.key}
+                  data-testid={`nav-${item.key.replace('/', '') || 'dashboard'}`}
                   style={{
                     display: 'flex',
                     alignItems: 'center',

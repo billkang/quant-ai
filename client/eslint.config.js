@@ -52,4 +52,17 @@ export default [
       },
     },
   },
+  {
+    files: ["e2e/**/*.ts", "playwright.config.ts"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
 ];

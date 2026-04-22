@@ -163,7 +163,11 @@ export default function AIAdvice() {
         </Text>
       </div>
 
-      <Card className="metric-card" bodyStyle={{ padding: '24px 28px' }}>
+      <Card
+        className="metric-card"
+        bodyStyle={{ padding: '24px 28px' }}
+        data-testid="ai-select-card"
+      >
         <Row gutter={[24, 16]} align="middle">
           <Col flex="auto">
             <Space.Compact style={{ width: '100%' }}>
@@ -177,6 +181,7 @@ export default function AIAdvice() {
                 onChange={setStockCode}
                 size="large"
                 options={stocks.map(s => ({ value: s.code, label: `${s.name} (${s.code})` }))}
+                data-testid="ai-stock-select"
               />
               <Button
                 type="primary"
@@ -185,6 +190,7 @@ export default function AIAdvice() {
                 loading={loading}
                 size="large"
                 style={{ width: '40%' }}
+                data-testid="ai-analyze-btn"
               >
                 <ThunderboltOutlined /> {loading ? '分析中...' : '开始分析'}
               </Button>

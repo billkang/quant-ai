@@ -180,7 +180,7 @@ export default function Screener() {
         智能选股
       </Title>
 
-      <Card title="筛选条件" bodyStyle={{ padding: 20 }}>
+      <Card title="筛选条件" bodyStyle={{ padding: 20 }} data-testid="screener-filters">
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           {conditions.map((cond, idx) => (
             <Space key={idx} size="middle">
@@ -212,7 +212,13 @@ export default function Screener() {
             <Button icon={<PlusOutlined />} onClick={addCondition}>
               添加条件
             </Button>
-            <Button type="primary" icon={<SearchOutlined />} onClick={handleRun} loading={loading}>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleRun}
+              loading={loading}
+              data-testid="screener-search-btn"
+            >
               开始筛选
             </Button>
             <Button icon={<SaveOutlined />} onClick={() => setSaveModalOpen(true)}>
@@ -241,13 +247,14 @@ export default function Screener() {
         </Card>
       )}
 
-      <Card title={`筛选结果 (${results.length})`}>
+      <Card title={`筛选结果 (${results.length})`} data-testid="screener-results">
         <Table
           dataSource={results}
           columns={columns}
           rowKey="code"
           size="small"
           pagination={{ pageSize: 20 }}
+          data-testid="screener-results-table"
         />
       </Card>
 

@@ -5,7 +5,7 @@ from alembic.config import Config as AlembicConfig
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api import ai, auth, news, portfolio, quant, screener, stocks
+from src.api import ai, auth, news, portfolio, quant, screener, seed, stocks
 from src.core.config import settings
 from src.core.docs_auth import DocsAuthMiddleware
 from src.core.exceptions import register_exception_handlers
@@ -54,6 +54,7 @@ app.include_router(ai.router, prefix="/api")
 app.include_router(portfolio.router, prefix="/api")
 app.include_router(quant.router, prefix="/api")
 app.include_router(screener.router, prefix="/api")
+app.include_router(seed.router, prefix="/api")
 
 
 @app.get("/api/health")

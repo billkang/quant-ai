@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     DOCS_USERNAME: str = ""
     DOCS_PASSWORD: str = ""
     SECRET_KEY: str = "change-me-in-production"
+    E2E_SEED_ENABLED: bool = False
 
 
 settings = Settings()
