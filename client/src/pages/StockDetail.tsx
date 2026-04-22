@@ -33,7 +33,8 @@ interface KLine {
   volume: number
 }
 
-interface Indicators {
+interface IndicatorItem {
+  tradeDate?: string
   ma5?: number
   ma10?: number
   ma20?: number
@@ -68,8 +69,8 @@ export default function StockDetail() {
   const navigate = useNavigate()
   const [stock, setStock] = useState<StockData | null>(null)
   const [klines, setKlines] = useState<KLine[]>([])
-  const [indicators, setIndicators] = useState<Indicators | null>(null)
-  const [indicatorHistory, setIndicatorHistory] = useState<Indicators[]>([])
+  const [indicators, setIndicators] = useState<IndicatorItem | null>(null)
+  const [indicatorHistory, setIndicatorHistory] = useState<IndicatorItem[]>([])
   const [fundamentals, setFundamentals] = useState<Fundamentals | null>(null)
   const [period, setPeriod] = useState('daily')
   const [loading, setLoading] = useState(true)
