@@ -56,6 +56,13 @@ class _FakeRedis:
 
 _deps_module.redis_client = _FakeRedis()
 
+# Provide a default mock user for all authenticated endpoints
+import src.api.auth as _auth_module  # noqa: E402
+from src.models import models as _models_module  # noqa: E402
+
+_mock_user = _models_module.User(id=1, username="test", email="t@test.com", is_active=True)
+app.dependency_overrides[_auth_module.get_current_user] = lambda: _mock_user
+
 client = TestClient(app)
 
 
@@ -179,7 +186,7 @@ class TestAIAPI:
         assert captured["fundamentals"].get("pe_ttm") == 15.5
         assert isinstance(captured["news"], list)
 
-        app.dependency_overrides.pop(auth_module.get_current_user, None)
+        app.dependency_overrides[auth_module.get_current_user] = lambda: _mock_user
 
     def test_get_history_empty(self):
         response = client.get("/api/ai/history")
