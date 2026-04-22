@@ -40,7 +40,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./server
-        run: uv pip install --system -r pyproject.toml
+        run: uv pip install --system -r pyproject.toml --extra dev
 
       - name: Run ruff check
         working-directory: ./server
