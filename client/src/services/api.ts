@@ -24,6 +24,12 @@ import type {
   AlertItem,
   AlertRuleRequest,
   HealthCheck,
+  EventItem,
+  EventSource,
+  EventJob,
+  EventRule,
+  StrategyItem,
+  StrategyVersion,
 } from '../types/api'
 
 const api = axios.create({
@@ -132,6 +138,50 @@ export const quantApi = {
   createAlertRule: (data: AlertRuleRequest) =>
     api.post<ApiResponse<{ id: number }>>('/quant/alerts/rules', data),
   markAlertRead: (id: number) => api.put<ApiResponse>(`/quant/alerts/${id}/read`),
+}
+
+export const dashboardApi = {
+  getOverview: () => api.get<ApiResponse<Record<string, unknown>>>('/dashboard'),
+}
+
+export const eventApi = {
+  getEvents: (params?: Record<string, unknown>) =>
+    api.get<ApiResponse<EventItem[]>>('/events', { params }),
+  updateEvent: (id: number, data: Record<string, unknown>) =>
+    api.put<ApiResponse<EventItem>>(`/events/${id}`, data),
+  deleteEvent: (id: number) => api.delete<ApiResponse>(`/events/${id}`),
+  getSources: () => api.get<ApiResponse<EventSource[]>>('/event-sources'),
+  createSource: (data: Record<string, unknown>) =>
+    api.post<ApiResponse<{ id: number }>>('/event-sources', data),
+  updateSource: (id: number, data: Record<string, unknown>) =>
+    api.put<ApiResponse<EventSource>>(`/event-sources/${id}`, data),
+  deleteSource: (id: number) => api.delete<ApiResponse>(`/event-sources/${id}`),
+  triggerSource: (id: number) =>
+    api.post<ApiResponse<Record<string, unknown>>>(`/event-sources/${id}/trigger`),
+  getJobs: (limit = 50) => api.get<ApiResponse<EventJob[]>>('/event-jobs', { params: { limit } }),
+  getJob: (id: number) => api.get<ApiResponse<EventJob>>(`/event-jobs/${id}`),
+  getRules: () => api.get<ApiResponse<EventRule[]>>('/event-rules'),
+  createRule: (data: Record<string, unknown>) =>
+    api.post<ApiResponse<{ id: number }>>('/event-rules', data),
+  updateRule: (id: number, data: Record<string, unknown>) =>
+    api.put<ApiResponse<EventRule>>(`/event-rules/${id}`, data),
+  activateRule: (id: number) =>
+    api.post<ApiResponse<Record<string, unknown>>>(`/event-rules/${id}/activate`),
+}
+
+export const strategyApi = {
+  getStrategies: () => api.get<ApiResponse<StrategyItem[]>>('/strategies'),
+  getBuiltinStrategies: () => api.get<ApiResponse<StrategyItem[]>>('/strategies/builtin'),
+  getStrategy: (id: number) => api.get<ApiResponse<StrategyItem>>(`/strategies/${id}`),
+  createStrategy: (data: Record<string, unknown>) =>
+    api.post<ApiResponse<{ id: number }>>('/strategies', data),
+  updateStrategy: (id: number, data: Record<string, unknown>) =>
+    api.put<ApiResponse<StrategyItem>>(`/strategies/${id}`, data),
+  deleteStrategy: (id: number) => api.delete<ApiResponse>(`/strategies/${id}`),
+  getVersions: (id: number) =>
+    api.get<ApiResponse<StrategyVersion[]>>(`/strategies/${id}/versions`),
+  createVersion: (id: number, data: Record<string, unknown>) =>
+    api.post<ApiResponse<StrategyVersion>>(`/strategies/${id}/versions`, data),
 }
 
 export const systemApi = {

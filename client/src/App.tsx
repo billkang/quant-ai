@@ -15,6 +15,10 @@ import StrategyManagement from './pages/StrategyManagement'
 import StrategyLibrary from './pages/StrategyLibrary'
 import DataManagement from './pages/DataManagement'
 import Settings from './pages/Settings'
+import EventsPage from './pages/EventsPage'
+import EventSourcesPage from './pages/EventSourcesPage'
+import EventJobsPage from './pages/EventJobsPage'
+import EventRulesPage from './pages/EventRulesPage'
 
 function App() {
   return (
@@ -36,6 +40,10 @@ function App() {
             <Route path="strategy-library" element={<StrategyLibrary />} />
             <Route path="data-management" element={<DataManagement />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="events" element={<EventsPage />} />
+            <Route path="event-sources" element={<EventSourcesPage />} />
+            <Route path="event-jobs" element={<EventJobsPage />} />
+            <Route path="event-rules" element={<EventRulesPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

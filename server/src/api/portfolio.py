@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import cast
 
 from fastapi import APIRouter, Depends
@@ -7,85 +6,76 @@ from sqlalchemy.orm import Session
 from src.api.auth import get_current_user
 from src.api.common import success_response
 from src.api.deps import get_db
-from src.models import crud
+from src.models import crud, models
 from src.models.models import User
-from src.services.stock_data import stock_service
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
 
 @router.get("")
 async def get_portfolio(
+    backtest_task_id: int | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    positions = crud.get_positions(db, user_id=cast(int, user.id))
+    """Get virtual positions. If backtest_task_id provided, filter by task."""
+    query = db.query(models.StrategyPosition).filter(
+        models.StrategyPosition.user_id == user.id,
+        models.StrategyPosition.is_active == 1,
+    )
+    if backtest_task_id:
+        query = query.filter(models.StrategyPosition.backtest_task_id == backtest_task_id)
+
+    positions = query.all()
     result = []
     total_value = 0.0
     total_cost = 0.0
 
     for pos in positions:
         code = cast(str, pos.stock_code)
-        if code.isdigit() and len(code) == 6:
-            current = stock_service.get_a_stock_quote(code)
-        else:
-            current = stock_service.get_hk_stock_quote(code)
+        # Use closing price instead of real-time quote for virtual positions
+        latest_price = (
+            db.query(models.StockDailyPrice)
+            .filter(models.StockDailyPrice.stock_code == code)
+            .order_by(models.StockDailyPrice.trade_date.desc())
+            .first()
+        )
+        current_price = cast(float, latest_price.close) if latest_price else 0.0
 
-        current_price = current.get("price", 0) if current else 0
         quantity = cast(int, pos.quantity)
-        cost_price = cast(float, pos.cost_price)
+        avg_cost = cast(float, pos.avg_cost)
         value = current_price * quantity
-        cost = cost_price * quantity
+        cost = avg_cost * quantity
         profit = value - cost
         profit_percent = (profit / cost * 100) if cost > 0 else 0
 
         result.append(
             {
+                "id": pos.id,
+                "backtestTaskId": pos.backtest_task_id,
+                "strategyId": pos.strategy_id,
                 "code": pos.stock_code,
                 "name": pos.stock_name,
                 "quantity": pos.quantity,
-                "costPrice": pos.cost_price,
+                "avgCost": pos.avg_cost,
                 "currentPrice": current_price,
+                "unrealizedPnl": pos.unrealized_pnl,
                 "profit": profit,
                 "profitPercent": profit_percent,
+                "isActive": pos.is_active,
             }
         )
         total_value += value
         total_cost += cost
 
-    return {
-        "positions": result,
-        "totalValue": total_value,
-        "totalCost": total_cost,
-        "totalProfit": total_value - total_cost,
-    }
-
-
-@router.post("")
-async def add_position(
-    stock_code: str,
-    stock_name: str,
-    quantity: int,
-    cost_price: float,
-    buy_date: str | None = None,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    date = datetime.strptime(buy_date, "%Y-%m-%d") if buy_date else datetime.now()
-    crud.add_position(
-        db, stock_code, stock_name, quantity, cost_price, date, user_id=cast(int, user.id)
+    return success_response(
+        data={
+            "positions": result,
+            "totalValue": total_value,
+            "totalCost": total_cost,
+            "totalProfit": total_value - total_cost,
+        }
     )
-    return success_response()
-
-
-@router.delete("/{stock_code}")
-async def delete_position(
-    stock_code: str,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    crud.delete_position(db, stock_code, user_id=cast(int, user.id))
-    return success_response()
 
 
 @router.get("/transactions", tags=["transactions"])
@@ -95,15 +85,17 @@ async def get_transactions(
     user: User = Depends(get_current_user),
 ):
     transactions = crud.get_transactions(db, limit, user_id=cast(int, user.id))
-    return [
-        {
-            "code": t.stock_code,
-            "name": t.stock_name,
-            "type": t.type,
-            "quantity": t.quantity,
-            "price": t.price,
-            "commission": t.commission,
-            "date": t.trade_date.isoformat() if t.trade_date else None,
-        }
-        for t in transactions
-    ]
+    return success_response(
+        data=[
+            {
+                "code": t.stock_code,
+                "name": t.stock_name,
+                "type": t.type,
+                "quantity": t.quantity,
+                "price": t.price,
+                "commission": t.commission,
+                "date": t.trade_date.isoformat() if t.trade_date else None,
+            }
+            for t in transactions
+        ]
+    )

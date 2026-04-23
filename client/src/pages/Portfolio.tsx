@@ -1,42 +1,25 @@
 import { useState, useEffect } from 'react'
-import { portfolioApi } from '../services/api'
-import {
-  Card,
-  Table,
-  Button,
-  Typography,
-  Space,
-  Tag,
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Empty,
-  Row,
-  Col,
-} from 'antd'
-import {
-  PlusOutlined,
-  DeleteOutlined,
-  FundOutlined,
-  DollarOutlined,
-  BarChartOutlined,
-  WarningOutlined,
-} from '@ant-design/icons'
+import { portfolioApi, quantApi } from '../services/api'
+import { Card, Table, Typography, Tag, Empty, Row, Col, Space } from 'antd'
+import { FundOutlined, DollarOutlined, BarChartOutlined, WarningOutlined } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
-import { quantApi } from '../services/api'
 
 const { Title, Text } = Typography
 
-interface Position {
+interface VirtualPosition {
+  id?: number
+  backtestTaskId?: number
+  strategyId?: number
   code: string
   name: string
   quantity: number
-  costPrice: number
+  avgCost?: number
+  costPrice?: number
   currentPrice: number
+  unrealizedPnl?: number
   profit: number
   profitPercent: number
+  isActive?: number
 }
 
 interface PortfolioAnalysis {
@@ -49,18 +32,13 @@ interface PortfolioAnalysis {
 
 export default function Portfolio() {
   const [data, setData] = useState<{
-    positions: Position[]
+    positions: VirtualPosition[]
     totalValue: number
     totalCost: number
     totalProfit: number
   }>({ positions: [], totalValue: 0, totalCost: 0, totalProfit: 0 })
   const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null)
-  const [showAdd, setShowAdd] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [form] = Form.useForm()
-  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; code: string; name: string }>(
-    { show: false, code: '', name: '' }
-  )
 
   useEffect(() => {
     fetchPortfolio()
@@ -71,7 +49,16 @@ export default function Portfolio() {
     try {
       setLoading(true)
       const res = await portfolioApi.getPortfolio()
-      setData(res.data || { positions: [], totalValue: 0, totalCost: 0, totalProfit: 0 })
+      if (res.data) {
+        setData(
+          res.data as {
+            positions: VirtualPosition[]
+            totalValue: number
+            totalCost: number
+            totalProfit: number
+          }
+        )
+      }
     } catch (error) {
       console.error('Failed to fetch portfolio:', error)
     } finally {
@@ -85,33 +72,6 @@ export default function Portfolio() {
       if (res.data?.code === 0) setAnalysis(res.data.data)
     } catch (error) {
       console.error('Failed to fetch analysis:', error)
-    }
-  }
-
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields()
-      await portfolioApi.addPosition({
-        stock_code: values.stock_code,
-        stock_name: values.stock_name || values.stock_code,
-        quantity: values.quantity,
-        cost_price: values.cost_price,
-      })
-      setShowAdd(false)
-      form.resetFields()
-      await fetchPortfolio()
-    } catch (error) {
-      console.error('Failed to add position:', error)
-    }
-  }
-
-  const confirmDelete = async () => {
-    try {
-      await portfolioApi.deletePosition(deleteConfirm.code)
-      setDeleteConfirm({ show: false, code: '', name: '' })
-      await fetchPortfolio()
-    } catch (error) {
-      console.error('Failed to delete position:', error)
     }
   }
 
@@ -130,7 +90,14 @@ export default function Portfolio() {
     icon: React.ElementType
     color: string
   }) => (
-    <Card className="metric-card" bodyStyle={{ padding: '20px 24px' }}>
+    <Card
+      style={{
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius)',
+      }}
+      bodyStyle={{ padding: '20px 24px' }}
+    >
       <Space align="start" size={14}>
         <div
           style={{
@@ -174,8 +141,8 @@ export default function Portfolio() {
     {
       title: '股票',
       key: 'name',
-      width: '22%',
-      render: (_: unknown, record: Position) => (
+      width: '20%',
+      render: (_: unknown, record: VirtualPosition) => (
         <Space direction="vertical" size={0}>
           <Text strong style={{ fontSize: 15, color: 'var(--text-primary)' }}>
             {record.name}
@@ -192,16 +159,16 @@ export default function Portfolio() {
       render: (qty: number) => <Text style={{ color: 'var(--text-primary)' }}>{qty} 股</Text>,
     },
     {
-      title: '成本价',
-      dataIndex: 'costPrice',
-      key: 'costPrice',
+      title: '平均成本',
+      dataIndex: 'avgCost',
+      key: 'avgCost',
       align: 'right' as const,
       render: (price: number) => (
         <Text style={{ color: 'var(--text-primary)' }}>¥{price?.toFixed(2) || '-'}</Text>
       ),
     },
     {
-      title: '现价',
+      title: '收盘价',
       dataIndex: 'currentPrice',
       key: 'currentPrice',
       align: 'right' as const,
@@ -210,13 +177,13 @@ export default function Portfolio() {
       ),
     },
     {
-      title: '盈亏',
-      dataIndex: 'profit',
-      key: 'profit',
+      title: '未实现盈亏',
+      dataIndex: 'unrealizedPnl',
+      key: 'unrealizedPnl',
       align: 'right' as const,
-      render: (profit: number) => (
-        <Text style={{ color: (profit || 0) >= 0 ? 'var(--up)' : 'var(--down)', fontWeight: 600 }}>
-          {profit >= 0 ? '+' : ''}¥{profit?.toFixed(2) || '-'}
+      render: (pnl: number) => (
+        <Text style={{ color: (pnl || 0) >= 0 ? 'var(--up)' : 'var(--down)', fontWeight: 600 }}>
+          {pnl >= 0 ? '+' : ''}¥{pnl?.toFixed(2) || '-'}
         </Text>
       ),
     },
@@ -240,21 +207,20 @@ export default function Portfolio() {
       ),
     },
     {
-      title: '',
-      key: 'action',
-      align: 'center' as const,
-      width: '8%',
-      render: (_: unknown, record: Position) => (
-        <Button
-          type="text"
-          danger
-          icon={<DeleteOutlined />}
-          size="small"
-          style={{ opacity: 0.5, transition: 'opacity 0.2s' }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-          onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}
-          onClick={() => setDeleteConfirm({ show: true, code: record.code, name: record.name })}
-        />
+      title: '状态',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      render: (active: number) => (
+        <Tag
+          style={{
+            borderRadius: 6,
+            background: active === 1 ? 'rgba(34,197,94,0.1)' : 'rgba(148,163,184,0.1)',
+            color: active === 1 ? '#22c55e' : 'var(--text-muted)',
+            border: 'none',
+          }}
+        >
+          {active === 1 ? '持仓中' : '已平仓'}
+        </Tag>
       ),
     },
   ]
@@ -263,9 +229,9 @@ export default function Portfolio() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <Title level={3} style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>
-          持仓管理
+          资产组合
         </Title>
-        <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>跟踪持仓表现与组合风险分析</Text>
+        <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>虚拟持仓与组合风险分析</Text>
       </div>
 
       <Row gutter={[20, 20]}>
@@ -275,7 +241,7 @@ export default function Portfolio() {
             value={data.totalValue.toFixed(2)}
             suffix="¥"
             icon={DollarOutlined}
-            color="#0ea5e9"
+            color="var(--accent)"
           />
         </Col>
         <Col xs={24} sm={8}>
@@ -284,7 +250,7 @@ export default function Portfolio() {
             value={data.totalProfit.toFixed(2)}
             suffix="¥"
             icon={FundOutlined}
-            color={data.totalProfit >= 0 ? '#ef4444' : '#22c55e'}
+            color={data.totalProfit >= 0 ? 'var(--up)' : 'var(--down)'}
           />
         </Col>
         <Col xs={24} sm={8}>
@@ -293,17 +259,22 @@ export default function Portfolio() {
             value={totalProfitPercent.toFixed(2)}
             suffix="%"
             icon={BarChartOutlined}
-            color={data.totalProfit >= 0 ? '#ef4444' : '#22c55e'}
+            color={data.totalProfit >= 0 ? 'var(--up)' : 'var(--down)'}
           />
         </Col>
       </Row>
 
       {analysis && (
         <Card
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+          }}
           title={
             <Space>
               <WarningOutlined style={{ color: 'var(--accent)' }} />
-              <span style={{ fontWeight: 600 }}>组合风险分析</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>组合风险分析</span>
             </Space>
           }
         >
@@ -402,20 +373,20 @@ export default function Portfolio() {
                     data: Object.keys(analysis.correlationMatrix),
                     splitArea: {
                       show: true,
-                      areaStyle: { color: ['rgba(148,163,184,0.03)', 'transparent'] },
+                      areaStyle: { color: ['var(--bg-hover)', 'transparent'] },
                     },
-                    axisLine: { lineStyle: { color: '#334155' } },
-                    axisLabel: { color: '#94a3b8' },
+                    axisLine: { lineStyle: { color: 'var(--border-hover)' } },
+                    axisLabel: { color: 'var(--text-muted)' },
                   },
                   yAxis: {
                     type: 'category',
                     data: Object.keys(analysis.correlationMatrix),
                     splitArea: {
                       show: true,
-                      areaStyle: { color: ['rgba(148,163,184,0.03)', 'transparent'] },
+                      areaStyle: { color: ['var(--bg-hover)', 'transparent'] },
                     },
-                    axisLine: { lineStyle: { color: '#334155' } },
-                    axisLabel: { color: '#94a3b8' },
+                    axisLine: { lineStyle: { color: 'var(--border-hover)' } },
+                    axisLabel: { color: 'var(--text-muted)' },
                   },
                   visualMap: {
                     min: -1,
@@ -424,8 +395,8 @@ export default function Portfolio() {
                     orient: 'horizontal',
                     left: 'center',
                     bottom: '10%',
-                    inRange: { color: ['#22c55e', '#0f172a', '#ef4444'] },
-                    textStyle: { color: '#94a3b8' },
+                    inRange: { color: ['var(--down)', 'var(--bg-body)', 'var(--up)'] },
+                    textStyle: { color: 'var(--text-muted)' },
                   },
                   series: [
                     {
@@ -438,7 +409,7 @@ export default function Portfolio() {
                         show: true,
                         formatter: (p: { value: [string, string, number] }) =>
                           p.value[2].toFixed(2),
-                        color: '#e2e8f0',
+                        color: 'var(--text-primary)',
                       },
                     },
                   ],
@@ -447,58 +418,21 @@ export default function Portfolio() {
               />
             </div>
           )}
-          {Object.keys(analysis.industryDistribution).length > 0 && (
-            <div style={{ marginTop: 20 }}>
-              <Text strong style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                行业分布
-              </Text>
-              <ReactECharts
-                option={{
-                  backgroundColor: 'transparent',
-                  tooltip: {
-                    trigger: 'item',
-                    backgroundColor: '#1e293b',
-                    borderColor: '#334155',
-                    textStyle: { color: '#e2e8f0' },
-                  },
-                  series: [
-                    {
-                      name: '行业分布',
-                      type: 'pie',
-                      radius: ['40%', '70%'],
-                      avoidLabelOverlap: false,
-                      itemStyle: { borderRadius: 8, borderColor: '#0f172a', borderWidth: 3 },
-                      label: { show: true, formatter: '{b}: {d}%', color: '#94a3b8' },
-                      data: Object.entries(analysis.industryDistribution).map(([name, value]) => ({
-                        name,
-                        value,
-                      })),
-                    },
-                  ],
-                }}
-                style={{ height: 300 }}
-              />
-            </div>
-          )}
         </Card>
       )}
 
       <Card
+        style={{
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius)',
+          overflow: 'hidden',
+        }}
         title={
           <Space>
             <FundOutlined style={{ color: 'var(--accent)' }} />
-            <span style={{ fontWeight: 600 }}>持仓明细</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>虚拟持仓明细</span>
           </Space>
-        }
-        extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setShowAdd(true)}
-            data-testid="portfolio-add-btn"
-          >
-            记录交易
-          </Button>
         }
         bodyStyle={{ padding: 0 }}
         data-testid="portfolio-holdings-card"
@@ -514,64 +448,15 @@ export default function Portfolio() {
             style={{ padding: 60 }}
           />
         ) : (
-          <Table columns={columns} dataSource={data.positions} rowKey="code" pagination={false} />
+          <Table
+            columns={columns}
+            dataSource={data.positions}
+            rowKey="id"
+            pagination={false}
+            size="small"
+          />
         )}
       </Card>
-
-      <Modal
-        title="记录交易"
-        open={showAdd}
-        onOk={handleSubmit}
-        onCancel={() => setShowAdd(false)}
-        okText="保存"
-      >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="stock_code" label="股票代码" rules={[{ required: true }]}>
-            <Input placeholder="如：600519" data-testid="portfolio-modal-stock-code" />
-          </Form.Item>
-          <Form.Item name="stock_name" label="股票名称">
-            <Input placeholder="如：贵州茅台" />
-          </Form.Item>
-          <Form.Item name="type" label="交易类型" initialValue="buy">
-            <Select
-              options={[
-                { value: 'buy', label: '买入' },
-                { value: 'sell', label: '卖出' },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item name="quantity" label="数量" rules={[{ required: true }]}>
-            <InputNumber
-              style={{ width: '100%' }}
-              min={1}
-              placeholder="100"
-              data-testid="portfolio-modal-quantity"
-            />
-          </Form.Item>
-          <Form.Item name="cost_price" label="价格" rules={[{ required: true }]}>
-            <InputNumber
-              style={{ width: '100%' }}
-              min={0.01}
-              precision={2}
-              placeholder="100.00"
-              data-testid="portfolio-modal-price"
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
-        title="确认删除"
-        open={deleteConfirm.show}
-        onOk={confirmDelete}
-        onCancel={() => setDeleteConfirm({ show: false, code: '', name: '' })}
-        okText="确定删除"
-        okButtonProps={{ danger: true }}
-      >
-        <p style={{ fontSize: 15, color: 'var(--text-primary)' }}>
-          确定要删除持仓 <Text strong>{deleteConfirm.name}</Text> ({deleteConfirm.code}) 吗？
-        </p>
-      </Modal>
     </div>
   )
 }

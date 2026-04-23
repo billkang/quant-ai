@@ -255,3 +255,81 @@ export interface AlertRuleRequest {
 export interface HealthCheck {
   status: string
 }
+
+// ---- Events ----
+
+export interface EventItem {
+  id: number
+  source_id: number
+  scope: string
+  symbol: string | null
+  sector: string | null
+  title: string
+  summary: string | null
+  sentiment: number | null
+  strength: number | null
+  certainty: number | null
+  urgency: number | null
+  duration: string | null
+  tags: string[] | null
+  signals: Record<string, unknown> | null
+  is_edited: number
+  created_at: string
+}
+
+export interface EventSource {
+  id: number
+  name: string
+  source_type: string
+  scope: string
+  config: Record<string, unknown>
+  schedule: string
+  enabled: number
+  last_fetched_at: string | null
+  last_error: string | null
+  created_at: string
+}
+
+export interface EventJob {
+  id: number
+  source_id: number
+  status: string
+  new_events_count: number
+  duplicate_count: number
+  error_count: number
+  progress?: number
+  started_at: string
+  completed_at: string | null
+}
+
+export interface EventRule {
+  id: number
+  name: string
+  rule_type: string
+  version: string
+  config: Record<string, unknown>
+  is_active: number
+  created_at: string
+}
+
+// ---- Strategy ----
+
+export interface StrategyItem {
+  id: number
+  name: string
+  description: string | null
+  category: string
+  strategy_code: string
+  params_schema: Record<string, unknown> | null
+  is_builtin: number
+  is_active: number
+  created_at: string
+}
+
+export interface StrategyVersion {
+  id: number
+  version_number: number
+  params_schema: Record<string, unknown> | null
+  changelog: string | null
+  created_at: string
+}

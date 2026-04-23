@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Column, DateTime, Float, Integer, String
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 
 from src.models.database import Base
 
@@ -225,3 +225,225 @@ class Alert(Base):
     message = Column(String)
     is_read = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ───────────────────────────────────────────────
+#  Event Factor System (mvp-event-factor-core)
+# ───────────────────────────────────────────────
+
+
+class EventSource(Base):
+    __tablename__ = "event_sources"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    source_type = Column(
+        String(50), nullable=False
+    )  # stock_news, stock_notice, macro_data, international
+    scope = Column(String(20), nullable=False, default="individual")  # individual / sector / market
+    config = Column(JSON, default=dict)
+    schedule = Column(String(100), default="0 */6 * * *")  # cron expression
+    enabled = Column(Integer, default=1)
+    last_fetched_at = Column(DateTime, nullable=True)
+    last_error = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class EventJob(Base):
+    __tablename__ = "event_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_id = Column(Integer, ForeignKey("event_sources.id"), index=True)
+    status = Column(String(20), default="running")  # running / success / failed
+    new_events_count = Column(Integer, default=0)
+    duplicate_count = Column(Integer, default=0)
+    error_count = Column(Integer, default=0)
+    logs = Column(Text, nullable=True)
+    error_message = Column(Text, nullable=True)
+    started_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+
+class EventRule(Base):
+    __tablename__ = "event_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    rule_type = Column(
+        String(50), nullable=False
+    )  # sentiment_extractor / classifier / sector_mapper
+    version = Column(String(20), nullable=False, default="1.0")
+    config = Column(JSON, default=dict)  # keywords, thresholds, mappings etc.
+    is_active = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Event(Base):
+    __tablename__ = "events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_id = Column(Integer, ForeignKey("event_sources.id"), index=True)
+    scope = Column(String(20), nullable=False, default="individual")  # individual / sector / market
+    symbol = Column(String(20), index=True, nullable=True)
+    sector = Column(String(100), nullable=True)
+    title = Column(String(500), nullable=False)
+    summary = Column(Text, nullable=True)
+    content = Column(Text, nullable=True)
+    url = Column(String(500), nullable=True)
+    publish_time = Column(DateTime, nullable=True)
+    # Extracted signals
+    sentiment = Column(Float, default=0)  # -1 to 1
+    strength = Column(Float, default=0)  # 0 to 1
+    certainty = Column(Float, default=0)  # 0 to 1
+    urgency = Column(Float, default=0)  # 0 to 1
+    duration = Column(String(20), nullable=True)  # short / medium / long
+    tags = Column(JSON, default=list)
+    signals = Column(JSON, default=dict)  # raw extracted signals
+    is_edited = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class EventFactor(Base):
+    __tablename__ = "event_factors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String(20), index=True, nullable=False)
+    trade_date = Column(DateTime, nullable=False, index=True)
+    individual_events = Column(
+        JSON, default=dict
+    )  # { news_count, avg_sentiment, max_strength, ... }
+    sector_events = Column(JSON, default=dict)
+    market_events = Column(JSON, default=dict)
+    composite = Column(Float, default=0)  # composite score
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class StockSectorMapping(Base):
+    __tablename__ = "stock_sector_mappings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    stock_code = Column(String(20), unique=True, index=True, nullable=False)
+    stock_name = Column(String(100))
+    sector = Column(String(100), nullable=False)
+    sector_code = Column(String(10), nullable=True)
+    industry_level1 = Column(String(100), nullable=True)
+    industry_level2 = Column(String(100), nullable=True)
+    source = Column(String(50), default="csrc")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# ───────────────────────────────────────────────
+#  Strategy Management
+# ───────────────────────────────────────────────
+
+
+class Strategy(Base):
+    __tablename__ = "strategies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    name = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String(50), default="technical")  # technical / event / combined
+    strategy_code = Column(String(50), nullable=False)  # ma_cross, rsi_oversold, etc.
+    params_schema = Column(JSON, default=dict)  # JSON Schema for params
+    is_builtin = Column(Integer, default=0)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class StrategyVersion(Base):
+    __tablename__ = "strategy_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    strategy_id = Column(Integer, ForeignKey("strategies.id"), index=True)
+    version_number = Column(Integer, nullable=False)
+    params_schema = Column(JSON, default=dict)
+    changelog = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ───────────────────────────────────────────────
+#  Factor Snapshots
+# ───────────────────────────────────────────────
+
+
+class FactorSnapshot(Base):
+    __tablename__ = "factor_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String(20), index=True, nullable=False)
+    trade_date = Column(DateTime, nullable=False, index=True)
+    # Technical factors (denormalized from stock_indicators)
+    technical = Column(JSON, default=dict)
+    # Event factors (denormalized from event_factors)
+    events = Column(JSON, default=dict)
+    # Price (denormalized from stock_daily_prices)
+    price = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# ───────────────────────────────────────────────
+#  Backtest Tasks (renamed / extended from strategy_backtests)
+# ───────────────────────────────────────────────
+
+
+class BacktestTask(Base):
+    __tablename__ = "backtest_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    strategy_id = Column(Integer, ForeignKey("strategies.id"), nullable=True)
+    strategy_version_id = Column(Integer, ForeignKey("strategy_versions.id"), nullable=True)
+    # Fallback for backward compatibility
+    strategy_name = Column(String(100), nullable=True)
+    stock_code = Column(String(20), nullable=False)
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=False)
+    initial_cash = Column(Float)
+    params = Column(JSON, default=dict)  # runtime strategy params
+    # Results
+    final_value = Column(Float)
+    total_return = Column(Float)
+    annualized_return = Column(Float)
+    max_drawdown = Column(Float)
+    sharpe_ratio = Column(Float)
+    win_rate = Column(Float)
+    trade_count = Column(Integer)
+    trades = Column(JSON)
+    equity_curve = Column(JSON)
+    # Execution tracking
+    status = Column(String(20), default="completed")  # pending / running / completed / failed
+    progress = Column(Float, default=100.0)  # 0-100
+    factor_snapshot_ids = Column(JSON, default=list)
+    error_message = Column(Text, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ───────────────────────────────────────────────
+#  Virtual Portfolio (extended positions)
+# ───────────────────────────────────────────────
+
+
+class StrategyPosition(Base):
+    __tablename__ = "strategy_positions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    backtest_task_id = Column(Integer, ForeignKey("backtest_tasks.id"), index=True, nullable=True)
+    strategy_id = Column(Integer, ForeignKey("strategies.id"), nullable=True)
+    stock_code = Column(String(20), index=True)
+    stock_name = Column(String(100))
+    quantity = Column(Integer)
+    avg_cost = Column(Float)
+    unrealized_pnl = Column(Float, default=0)
+    is_active = Column(Integer, default=1)
+    buy_date = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

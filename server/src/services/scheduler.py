@@ -6,6 +6,9 @@ from apscheduler.triggers.cron import CronTrigger
 
 from ..models import crud
 from ..models.database import SessionLocal
+from ..models.models import EventSource
+from .event_fetchers import run_fetcher
+from .event_pipeline_service import EventPipelineService
 from .fundamental_service import fundamental_service
 from .indicator import indicator_service
 from .news import news_service
@@ -53,6 +56,20 @@ class SchedulerService:
             CronTrigger(day=1, hour=2, minute=0),
             id="fundamentals_update",
             name="月度基本面数据更新",
+            replace_existing=True,
+        )
+        self.scheduler.add_job(
+            self.daily_event_update,
+            CronTrigger(hour=17, minute=0),
+            id="daily_event_update",
+            name="每日事件因子聚合",
+            replace_existing=True,
+        )
+        self.scheduler.add_job(
+            self.interval_news_fetch,
+            CronTrigger(hour="*/6", minute=0),
+            id="interval_news_fetch",
+            name="定时新闻采集",
             replace_existing=True,
         )
         self.scheduler.start()
@@ -313,6 +330,45 @@ class SchedulerService:
             logger.info("Fundamentals update completed")
         except Exception as e:
             logger.error(f"Fundamentals update failed: {e}")
+        finally:
+            db.close()
+
+    def interval_news_fetch(self):
+        """Run enabled event sources fetchers."""
+        logger.info("Running interval news fetch")
+        db = SessionLocal()
+        try:
+            sources = db.query(EventSource).filter(EventSource.enabled == 1).all()
+            for source in sources:
+                try:
+                    run_fetcher(db, source)
+                    logger.info(f"Fetched from source: {source.name}")
+                except Exception as e:
+                    logger.error(f"Failed to fetch from {source.name}: {e}")
+            logger.info("Interval news fetch completed")
+        except Exception as e:
+            logger.error(f"Interval news fetch failed: {e}")
+        finally:
+            db.close()
+
+    def daily_event_update(self):
+        """Aggregate events into event_factors for all symbols."""
+        logger.info("Running daily event factor aggregation")
+        db = SessionLocal()
+        try:
+            pipeline = EventPipelineService(db)
+            watchlist = crud.get_watchlist(db)
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+            for item in watchlist:
+                try:
+                    pipeline.aggregate_event_factors(item.stock_code, today)
+                    logger.info(f"Aggregated event factors for {item.stock_code}")
+                except Exception as e:
+                    logger.error(f"Failed to aggregate event factors for {item.stock_code}: {e}")
+            logger.info("Daily event factor aggregation completed")
+        except Exception as e:
+            logger.error(f"Daily event factor aggregation failed: {e}")
         finally:
             db.close()
 

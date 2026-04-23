@@ -6,12 +6,13 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.api.auth import get_current_user
-from src.api.common import success_response
+from src.api.common import error_response, success_response
 from src.api.deps import get_db
-from src.models import crud
+from src.models import crud, models
 from src.models.models import User
 from src.services.backtest_service import backtest_service
 from src.services.fundamental_service import fundamental_service
+from src.services.strategy_service import StrategyService
 
 router = APIRouter(prefix="/quant", tags=["quant"])
 
@@ -94,8 +95,6 @@ async def get_fundamentals(code: str, db: Session = Depends(get_db)):
         try:
             data = fundamental_service.fetch_fundamental(code)
             if data:
-                from datetime import datetime
-
                 report_date = datetime.strptime(data.get("report_date", "2025-12-31"), "%Y-%m-%d")
                 crud.save_fundamental(db, code, report_date, **data)
                 fundamental = crud.get_latest_fundamental(db, code)
@@ -129,7 +128,9 @@ async def get_fundamentals(code: str, db: Session = Depends(get_db)):
 
 class BacktestRequest(BaseModel):
     stockCode: str
-    strategy: str
+    strategy: str | None = None
+    strategyId: int | None = None
+    strategyVersionId: int | None = None
     strategyParams: dict[str, Any] = {}
     startDate: str
     endDate: str
@@ -142,23 +143,51 @@ async def run_backtest(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    # Determine strategy info
+    strategy_name = req.strategy
+    strategy_code: str | None = None
+    strategy_id = None
+    strategy_version_id = None
+    params = req.strategyParams or {}
+
+    if req.strategyId:
+        svc = StrategyService(db)
+        strategy = svc.get_strategy(req.strategyId)
+        if strategy:
+            strategy_id = strategy.id
+            strategy_code = cast(str | None, strategy.strategy_code)
+            strategy_name = cast(str, strategy.name)
+            # Validate params
+            valid, msg = svc.validate_params(req.strategyId, params)
+            if not valid:
+                return error_response(message=f"参数验证失败: {msg}")
+
+    if req.strategyVersionId:
+        strategy_version_id = req.strategyVersionId
+
     result = backtest_service.run(
-        strategy_name=req.strategy,
+        strategy_name=strategy_name,
+        strategy_code=strategy_code,
         stock_code=req.stockCode,
         start_date=req.startDate,
         end_date=req.endDate,
         initial_cash=req.initialCash,
-        params=req.strategyParams,
+        params=params,
         db=db,
+        use_snapshots=False,  # MVP: fallback to kline for now
     )
-    backtest = crud.save_backtest(
-        db=db,
+
+    # Save to backtest_tasks
+    backtest = models.BacktestTask(
         user_id=user.id,
-        strategy_name=req.strategy,
+        strategy_id=strategy_id,
+        strategy_version_id=strategy_version_id,
+        strategy_name=strategy_name,
         stock_code=req.stockCode,
         start_date=datetime.strptime(req.startDate, "%Y-%m-%d"),
         end_date=datetime.strptime(req.endDate, "%Y-%m-%d"),
         initial_cash=req.initialCash,
+        params=params,
         final_value=result["final_value"],
         total_return=result["total_return"],
         annualized_return=result["annualized_return"],
@@ -168,7 +197,14 @@ async def run_backtest(
         trade_count=result["trade_count"],
         trades=result["trades"],
         equity_curve=result["equity_curve"],
+        status="completed",
+        progress=100.0,
+        completed_at=datetime.utcnow(),
     )
+    db.add(backtest)
+    db.commit()
+    db.refresh(backtest)
+
     return success_response(
         data={
             "id": backtest.id,
@@ -183,12 +219,20 @@ async def get_backtests(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    backtests = crud.get_backtests(db, limit, user_id=cast(int, user.id))
+    backtests = (
+        db.query(models.BacktestTask)
+        .filter(models.BacktestTask.user_id == user.id)
+        .order_by(models.BacktestTask.created_at.desc())
+        .limit(limit)
+        .all()
+    )
     return success_response(
         data=[
             {
                 "id": b.id,
                 "strategy": b.strategy_name,
+                "strategyId": b.strategy_id,
+                "strategyVersionId": b.strategy_version_id,
                 "stockCode": b.stock_code,
                 "startDate": b.start_date.strftime("%Y-%m-%d") if b.start_date else None,
                 "endDate": b.end_date.strftime("%Y-%m-%d") if b.end_date else None,
@@ -198,6 +242,8 @@ async def get_backtests(
                 "sharpeRatio": b.sharpe_ratio,
                 "winRate": b.win_rate,
                 "tradeCount": b.trade_count,
+                "status": b.status,
+                "progress": b.progress,
             }
             for b in backtests
         ]
@@ -210,17 +256,24 @@ async def get_backtest_detail(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    b = crud.get_backtest_by_id(db, backtest_id, user_id=cast(int, user.id))
+    b = (
+        db.query(models.BacktestTask)
+        .filter(models.BacktestTask.id == backtest_id, models.BacktestTask.user_id == user.id)
+        .first()
+    )
     if not b:
         return success_response(data=None)
     return success_response(
         data={
             "id": b.id,
             "strategy": b.strategy_name,
+            "strategyId": b.strategy_id,
+            "strategyVersionId": b.strategy_version_id,
             "stockCode": b.stock_code,
             "startDate": b.start_date.strftime("%Y-%m-%d") if b.start_date else None,
             "endDate": b.end_date.strftime("%Y-%m-%d") if b.end_date else None,
             "initialCash": b.initial_cash,
+            "params": b.params,
             "finalValue": b.final_value,
             "totalReturn": b.total_return,
             "annualizedReturn": b.annualized_return,
@@ -230,6 +283,8 @@ async def get_backtest_detail(
             "tradeCount": b.trade_count,
             "equityCurve": b.equity_curve,
             "trades": b.trades,
+            "status": b.status,
+            "factorSnapshotIds": b.factor_snapshot_ids,
         }
     )
 

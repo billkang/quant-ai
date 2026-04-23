@@ -57,13 +57,17 @@ Body (BaseModel):
 ```json
 {
   "stockCode": "600519",
-  "strategy": "ma_cross",
+  "strategyId": 1,
+  "strategyVersionId": 1,
   "strategyParams": {"short": 5, "long": 20},
   "startDate": "2025-01-01",
   "endDate": "2026-04-21",
   "initialCash": 100000
 }
 ```
+> **兼容**: 仍支持旧字段 `strategy` (strategy_name 字符串) 作为回退。
+> `strategyParams` 会根据策略的 `params_schema` 进行 JSON Schema 验证。
+
 Response:
 ```json
 {
@@ -82,7 +86,8 @@ Response:
     "trades": [
       {"date": "2025-01-05", "action": "buy", "price": 1600, "shares": 62}
     ],
-    "final_value": 115500
+    "final_value": 115500,
+    "factorSnapshotIds": [101, 102, 103]
   },
   "message": "ok"
 }
@@ -101,6 +106,8 @@ GET /api/quant/backtests/{id}
     {
       "id": 1,
       "strategy": "ma_cross",
+      "strategyId": 1,
+      "strategyVersionId": 1,
       "stockCode": "600519",
       "startDate": "2025-01-01",
       "endDate": "2026-04-21",
@@ -109,7 +116,9 @@ GET /api/quant/backtests/{id}
       "maxDrawdown": -8.2,
       "sharpeRatio": 1.15,
       "winRate": 55.0,
-      "tradeCount": 12
+      "tradeCount": 12,
+      "status": "completed",
+      "progress": 100
     }
   ],
   "message": "ok"
@@ -205,13 +214,18 @@ PUT /api/quant/alerts/{id}/read
 - debt_ratio, free_cash_flow
 - created_at
 
-### strategy_backtests 表
-- id, strategy_name, stock_code
-- start_date, end_date, initial_cash, final_value
-- total_return, annualized_return, max_drawdown
+### backtest_tasks 表
+- id, user_id
+- strategy_id (FK → strategies.id), strategy_version_id (FK → strategy_versions.id)
+- strategy_name (兼容回退)
+- stock_code, start_date, end_date, initial_cash
+- params (JSON) — 运行时策略参数
+- final_value, total_return, annualized_return, max_drawdown
 - sharpe_ratio, win_rate, trade_count
 - trades (JSON), equity_curve (JSON)
-- created_at
+- factor_snapshot_ids (JSON)
+- status (String: pending/running/completed/failed), progress (Float)
+- completed_at, created_at
 
 ### alerts 表
 - id, stock_code, alert_type, condition
@@ -226,13 +240,17 @@ PUT /api/quant/alerts/{id}/read
 | rsi_oversold | RSI超买卖 | period, oversold, overbought |
 | macd_signal | MACD金叉死叉 | fast, slow, signal |
 
+> 内置策略存储在 `strategies` 表中，`is_builtin: true`。策略代码仍为 Python 类，但参数通过 `params_schema` (JSON Schema) 结构化定义。
+
 ## Scheduler Pipeline
 
 每日 15:30 收盘后自动执行：
 1. 拉取自选股行情 → stock_daily_prices
 2. 计算指标 → stock_indicators
-3. 扫描告警规则 → alerts
-4. （季度）更新基本面 → stock_fundamentals
+3. 聚合事件因子 → event_factors
+4. 生成因子快照 → factor_snapshots
+5. 扫描告警规则 → alerts
+6. （季度）更新基本面 → stock_fundamentals
 
 ## 状态
 

@@ -6,51 +6,41 @@
 
 ## API 接口
 
-### 获取持仓列表
+### 获取持仓列表（虚拟持仓）
 ```
-GET /api/portfolio
+GET /api/portfolio?backtest_task_id={optional}
 ```
-Response: 直接返回 dict (无 success_response 包装)
+> 持仓现在为虚拟持仓，关联回测任务。支持按 `backtest_task_id` 过滤。
+
+Response (success_response 包装):
 ```json
 {
-  "positions": [
-    {
-      "code": "600519",
-      "name": "贵州茅台",
-      "quantity": 100,
-      "costPrice": 1800.00,
-      "currentPrice": 1850.00,
-      "profit": 5000.00,
-      "profitPercent": 2.78
-    }
-  ],
-  "totalValue": 185000.00,
-  "totalCost": 180000.00,
-  "totalProfit": 5000.00
+  "code": 0,
+  "data": {
+    "positions": [
+      {
+        "id": 1,
+        "backtestTaskId": 12,
+        "strategyId": 3,
+        "code": "600519",
+        "name": "贵州茅台",
+        "quantity": 100,
+        "avgCost": 1800.00,
+        "currentPrice": 1850.00,
+        "unrealizedPnl": 5000.00,
+        "profit": 5000.00,
+        "profitPercent": 2.78,
+        "isActive": 1
+      }
+    ],
+    "totalValue": 185000.00,
+    "totalCost": 180000.00,
+    "totalProfit": 5000.00
+  },
+  "message": "ok"
 }
 ```
-
-### 添加持仓
-```
-POST /api/portfolio
-```
-> **实现方式**: 使用 query params 传递参数 (`stock_code`, `stock_name`, `quantity`, `cost_price`, `buy_date`)，未使用 BaseModel Request Body。
-> 
-> **注意**: 前端 `Portfolio.tsx` 实际发送 JSON body，与后端接收方式不匹配。
-
-Response:
-```json
-{ "code": 0, "data": null, "message": "ok" }
-```
-
-### 删除持仓
-```
-DELETE /api/portfolio/{stock_code}
-```
-Response:
-```json
-{ "code": 0, "data": null, "message": "ok" }
-```
+> **注意**: `currentPrice` 使用最新收盘价，非实时行情。
 
 ### 获取交易记录
 ```
@@ -73,14 +63,20 @@ Response: 直接返回数组 (无 success_response 包装)
 
 ## 数据模型
 
-### positions 表
+### strategy_positions 表
 - id (Integer, PK)
+- user_id (Integer, index)
+- backtest_task_id (Integer, FK → backtest_tasks.id, index)
+- strategy_id (Integer, FK → strategies.id)
 - stock_code (String(20), index)
 - stock_name (String(100))
 - quantity (Integer)
-- cost_price (Float)
+- avg_cost (Float)
+- unrealized_pnl (Float)
+- is_active (Integer, default=1)
 - buy_date (DateTime)
 - created_at (DateTime)
+- updated_at (DateTime)
 
 ### transactions 表
 - id (Integer, PK)
@@ -97,8 +93,8 @@ Response: 直接返回数组 (无 success_response 包装)
 
 | 指标 | 计算方式 |
 |------|----------|
-| 持仓市值 | 数量 × 现价 |
-| 持仓成本 | 数量 × 成本价 |
+| 持仓市值 | 数量 × 收盘价 |
+| 持仓成本 | 数量 × 平均成本 |
 | 盈亏金额 | 持仓市值 - 持仓成本 |
 | 盈亏比例 | (盈亏金额 / 持仓成本) × 100% |
 
@@ -108,5 +104,5 @@ Response: 直接返回数组 (无 success_response 包装)
 
 ## 已知问题
 
-1. `POST /api/portfolio` 使用 query params，未使用 BaseModel Request Body。前端实际发送 JSON body，前后端不匹配。
-2. `GET /api/portfolio` 和 `GET /api/portfolio/transactions` 直接返回数据，未统一使用 success_response 包装。
+1. `GET /api/portfolio/transactions` 直接返回数据，未统一使用 success_response 包装。
+2. 虚拟持仓目前需要手动从回测 trades 生成，后续可改为自动创建。

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { stockApi } from '../services/api'
+import { dashboardApi, stockApi } from '../services/api'
 import {
   Card,
   Table,
@@ -15,8 +15,15 @@ import {
   Popconfirm,
   message,
 } from 'antd'
-import { PlusOutlined, DeleteOutlined, ThunderboltOutlined } from '@ant-design/icons'
-import ReactECharts from 'echarts-for-react'
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  ThunderboltOutlined,
+  BookOutlined,
+  BarChartOutlined,
+  ClockCircleOutlined,
+  DatabaseOutlined,
+} from '@ant-design/icons'
 
 const { Text } = Typography
 
@@ -28,49 +35,35 @@ interface Stock {
   changePercent: number
 }
 
-type TimeRange = '1D' | '1W' | '1M' | '3M'
-type DistMode = '资产' | '数量'
-type KlinePeriod = '5m' | '15m' | '1h' | '4h'
-
-function generateTrendData(range: TimeRange) {
-  const points: { label: string; value: number }[] = []
-  const base = 90000
-  const count = range === '1D' ? 24 : range === '1W' ? 7 : range === '1M' ? 30 : 90
-  const labels =
-    range === '1D'
-      ? Array.from({ length: count }, (_, i) => `${i}:00`)
-      : range === '1W'
-        ? ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-        : range === '1M'
-          ? Array.from({ length: count }, (_, i) => `${i + 1}日`)
-          : Array.from({ length: count }, (_, i) => `${i + 1}`)
-
-  let current = base
-  for (let i = 0; i < count; i++) {
-    current = current * (1 + (Math.random() - 0.45) * 0.03)
-    if (range === '1M' || range === '3M') {
-      if (i < 3) current = base * (1 + i * 0.02)
+interface DashboardData {
+  stats: {
+    strategyCount: number
+    backtestCount: number
+    watchlistCount: number
+    dataCoverage: {
+      prices: number
+      indicators: number
+      events: number
     }
-    points.push({ label: labels[i] ?? `${i}`, value: Math.round(current) })
   }
-  return points
-}
-
-function generateKlineData(count: number) {
-  const data: [string, number, number, number, number][] = []
-  let base = 31000
-  const now = new Date()
-  for (let i = count; i >= 0; i--) {
-    const t = new Date(now.getTime() - i * 3600000)
-    const timeStr = `${t.getMonth() + 1}/${t.getDate()} ${t.getHours()}:00`
-    const open = base + (Math.random() - 0.5) * 400
-    const close = open + (Math.random() - 0.5) * 600
-    const high = Math.max(open, close) + Math.random() * 200
-    const low = Math.min(open, close) - Math.random() * 200
-    data.push([timeStr, Math.round(open), Math.round(close), Math.round(high), Math.round(low)])
-    base = close
-  }
-  return data
+  recentBacktests: Array<{
+    id: number
+    strategy: string
+    stockCode: string
+    startDate: string
+    endDate: string
+    totalReturn: number
+    status: string
+    createdAt: string
+  }>
+  topStrategies: Array<{
+    id: number
+    strategy: string
+    stockCode: string
+    totalReturn: number
+    sharpeRatio: number
+    maxDrawdown: number
+  }>
 }
 
 export default function Dashboard() {
@@ -78,14 +71,27 @@ export default function Dashboard() {
   const [stocks, setStocks] = useState<Stock[]>([])
   const [loading, setLoading] = useState(true)
   const [newCode, setNewCode] = useState('')
-
-  const [timeRange, setTimeRange] = useState<TimeRange>('1M')
-  const [distMode, setDistMode] = useState<DistMode>('资产')
-  const [klinePeriod, setKlinePeriod] = useState<KlinePeriod>('1h')
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [dashboardLoading, setDashboardLoading] = useState(true)
 
   useEffect(() => {
     fetchWatchlist()
+    fetchDashboard()
   }, [])
+
+  const fetchDashboard = async () => {
+    try {
+      setDashboardLoading(true)
+      const res = await dashboardApi.getOverview()
+      if (res.data?.code === 0) {
+        setDashboardData(res.data.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard:', error)
+    } finally {
+      setDashboardLoading(false)
+    }
+  }
 
   const fetchWatchlist = async () => {
     try {
@@ -110,153 +116,147 @@ export default function Dashboard() {
       message.success(`已添加 ${res.data.data?.name || newCode}`)
       setNewCode('')
       await fetchWatchlist()
+      await fetchDashboard()
     } catch {
       message.error('添加失败')
     }
   }
 
-  const trendData = generateTrendData(timeRange)
+  const stats = dashboardData?.stats
 
-  const trendOption = {
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'axis',
-      formatter: (params: Array<{ name: string; value: number }>) => {
-        const p = params[0]
-        return `${p.name}<br/>$${p.value.toLocaleString()}`
-      },
+  const backtestColumns = [
+    {
+      title: '策略',
+      key: 'strategy',
+      render: (_: unknown, record: DashboardData['recentBacktests'][0]) => (
+        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{record.strategy}</span>
+      ),
     },
-    grid: { left: 16, right: 16, top: 16, bottom: 32, containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: trendData.map(d => d.label),
-      axisLine: { lineStyle: { color: 'var(--border-hover)' } },
-      axisLabel: { color: 'var(--text-muted)', fontSize: 11 },
-      axisTick: { show: false },
+    {
+      title: '股票',
+      key: 'stockCode',
+      render: (_: unknown, record: DashboardData['recentBacktests'][0]) => (
+        <span style={{ color: 'var(--text-secondary)' }}>{record.stockCode}</span>
+      ),
     },
-    yAxis: {
-      type: 'value',
-      axisLine: { show: false },
-      axisTick: { show: false },
-      splitLine: { lineStyle: { color: 'var(--border)' } },
-      axisLabel: {
-        color: 'var(--text-muted)',
-        fontSize: 11,
-        formatter: (v: number) => `$${(v / 1000).toFixed(0)}k`,
-      },
+    {
+      title: '收益率',
+      key: 'totalReturn',
+      align: 'right' as const,
+      render: (_: unknown, record: DashboardData['recentBacktests'][0]) => (
+        <Tag
+          style={{
+            borderRadius: 6,
+            fontWeight: 600,
+            background: (record.totalReturn || 0) >= 0 ? 'var(--up-soft)' : 'var(--down-soft)',
+            color: (record.totalReturn || 0) >= 0 ? 'var(--up)' : 'var(--down)',
+            border: 'none',
+          }}
+        >
+          {record.totalReturn
+            ? `${record.totalReturn >= 0 ? '+' : ''}${record.totalReturn.toFixed(2)}%`
+            : '-'}
+        </Tag>
+      ),
     },
-    series: [
-      {
-        data: trendData.map(d => d.value),
-        type: 'line',
-        smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2, color: '#3b82f6' },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(59, 130, 246, 0.2)' },
-              { offset: 1, color: 'rgba(59, 130, 246, 0.02)' },
-            ],
-          },
-        },
-      },
-    ],
-  }
-
-  const pieColors = ['#3b82f6', '#10b981', '#f43f5e', '#f59e0b', '#6b7280']
-  const pieAssetData = [
-    { value: 45000, name: '趋势跟踪' },
-    { value: 28000, name: '网格交易' },
-    { value: 22000, name: '套利策略' },
-    { value: 18000, name: '均值回归' },
-    { value: 15450, name: '其他' },
+    {
+      title: '状态',
+      key: 'status',
+      render: (_: unknown, record: DashboardData['recentBacktests'][0]) => (
+        <Tag
+          style={{
+            borderRadius: 6,
+            fontWeight: 500,
+            background:
+              record.status === 'completed'
+                ? 'rgba(34, 197, 94, 0.1)'
+                : record.status === 'running'
+                  ? 'rgba(59, 130, 246, 0.1)'
+                  : 'rgba(239, 68, 68, 0.1)',
+            color:
+              record.status === 'completed'
+                ? '#22c55e'
+                : record.status === 'running'
+                  ? '#3b82f6'
+                  : '#ef4444',
+            border: 'none',
+          }}
+        >
+          {record.status === 'completed'
+            ? '已完成'
+            : record.status === 'running'
+              ? '运行中'
+              : '失败'}
+        </Tag>
+      ),
+    },
+    {
+      title: '时间',
+      key: 'createdAt',
+      render: (_: unknown, record: DashboardData['recentBacktests'][0]) => (
+        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+          {record.createdAt ? new Date(record.createdAt).toLocaleDateString() : '-'}
+        </span>
+      ),
+    },
   ]
-  const pieCountData = [
-    { value: 6, name: '趋势跟踪' },
-    { value: 3, name: '网格交易' },
-    { value: 2, name: '套利策略' },
-    { value: 2, name: '均值回归' },
-    { value: 1, name: '其他' },
+
+  const topStrategyColumns = [
+    {
+      title: '策略',
+      key: 'strategy',
+      render: (_: unknown, record: DashboardData['topStrategies'][0]) => (
+        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{record.strategy}</span>
+      ),
+    },
+    {
+      title: '股票',
+      key: 'stockCode',
+      render: (_: unknown, record: DashboardData['topStrategies'][0]) => (
+        <span style={{ color: 'var(--text-secondary)' }}>{record.stockCode}</span>
+      ),
+    },
+    {
+      title: '总收益',
+      key: 'totalReturn',
+      align: 'right' as const,
+      render: (_: unknown, record: DashboardData['topStrategies'][0]) => (
+        <Tag
+          style={{
+            borderRadius: 6,
+            fontWeight: 600,
+            background: (record.totalReturn || 0) >= 0 ? 'var(--up-soft)' : 'var(--down-soft)',
+            color: (record.totalReturn || 0) >= 0 ? 'var(--up)' : 'var(--down)',
+            border: 'none',
+          }}
+        >
+          {record.totalReturn
+            ? `${record.totalReturn >= 0 ? '+' : ''}${record.totalReturn.toFixed(2)}%`
+            : '-'}
+        </Tag>
+      ),
+    },
+    {
+      title: '夏普比率',
+      key: 'sharpeRatio',
+      align: 'right' as const,
+      render: (_: unknown, record: DashboardData['topStrategies'][0]) => (
+        <span style={{ color: 'var(--text-secondary)' }}>
+          {record.sharpeRatio?.toFixed(2) ?? '-'}
+        </span>
+      ),
+    },
+    {
+      title: '最大回撤',
+      key: 'maxDrawdown',
+      align: 'right' as const,
+      render: (_: unknown, record: DashboardData['topStrategies'][0]) => (
+        <span style={{ color: 'var(--down)' }}>
+          {record.maxDrawdown ? `${record.maxDrawdown.toFixed(2)}%` : '-'}
+        </span>
+      ),
+    },
   ]
-
-  const pieOption = {
-    backgroundColor: 'transparent',
-    tooltip: { trigger: 'item' },
-    legend: {
-      orient: 'vertical',
-      right: 0,
-      top: 'center',
-      textStyle: { color: 'var(--text-secondary)', fontSize: 12 },
-      itemWidth: 12,
-      itemHeight: 12,
-      itemGap: 12,
-    },
-    color: pieColors,
-    series: [
-      {
-        name: '策略分布',
-        type: 'pie',
-        radius: ['45%', '70%'],
-        center: ['35%', '50%'],
-        avoidLabelOverlap: false,
-        itemStyle: { borderRadius: 6, borderColor: 'var(--bg-surface)', borderWidth: 2 },
-        label: { show: false },
-        emphasis: { label: { show: false } },
-        data: distMode === '资产' ? pieAssetData : pieCountData,
-      },
-    ],
-  }
-
-  const klineRaw = generateKlineData(
-    klinePeriod === '5m' ? 48 : klinePeriod === '15m' ? 48 : klinePeriod === '1h' ? 24 : 12
-  )
-  const klineOption = {
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'cross' },
-      formatter: (
-        params: Array<{ seriesName: string; value: [string, number, number, number, number] }>
-      ) => {
-        const d = params[0]?.value
-        if (!d) return ''
-        return `${d[0]}<br/>开盘: $${d[1]}<br/>收盘: $${d[2]}<br/>最高: $${d[3]}<br/>最低: $${d[4]}`
-      },
-    },
-    grid: { left: 16, right: 16, top: 16, bottom: 32, containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: klineRaw.map(d => d[0]),
-      axisLine: { lineStyle: { color: 'var(--border-hover)' } },
-      axisLabel: { color: 'var(--text-muted)', fontSize: 11 },
-      axisTick: { show: false },
-    },
-    yAxis: {
-      scale: true,
-      axisLine: { show: false },
-      axisTick: { show: false },
-      splitLine: { lineStyle: { color: 'var(--border)' } },
-      axisLabel: { color: 'var(--text-muted)', fontSize: 11 },
-    },
-    series: [
-      {
-        type: 'candlestick',
-        data: klineRaw.map(d => [d[1], d[2], d[3], d[4]]),
-        itemStyle: {
-          color: '#ef4444',
-          color0: '#22c55e',
-          borderColor: '#ef4444',
-          borderColor0: '#22c55e',
-        },
-      },
-    ],
-  }
 
   const columns = [
     {
@@ -357,13 +357,15 @@ export default function Dashboard() {
   const StatCard = ({
     title,
     value,
-    sub,
-    subColor,
+    icon,
+    color,
+    link,
   }: {
     title: string
-    value: string
-    sub: string
-    subColor?: string
+    value: string | number
+    icon: React.ReactNode
+    color: string
+    link?: string
   }) => (
     <Card
       style={{
@@ -371,49 +373,84 @@ export default function Dashboard() {
         border: '1px solid var(--border)',
         borderRadius: 'var(--radius)',
         boxShadow: 'var(--shadow)',
+        cursor: link ? 'pointer' : 'default',
       }}
       bodyStyle={{ padding: '20px 24px' }}
+      onClick={() => link && navigate(link)}
+      hoverable={!!link}
     >
-      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>{title}</div>
-      <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-        {value}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 12,
+        }}
+      >
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            background: `${color}15`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <span style={{ color, fontSize: 20 }}>{icon}</span>
+        </div>
       </div>
-      <div style={{ fontSize: 13, color: subColor || 'var(--text-muted)', marginTop: 8 }}>
-        {sub}
+      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>{title}</div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+        {dashboardLoading ? '-' : value}
       </div>
     </Card>
   )
 
-  const timeRanges: TimeRange[] = ['1D', '1W', '1M', '3M']
-  const distModes: DistMode[] = ['资产', '数量']
-  const klinePeriods: KlinePeriod[] = ['5m', '15m', '1h', '4h']
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Stats */}
+      {/* Stats Cards */}
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
           <StatCard
-            title="总资产 (USD)"
-            value="$128,450.36"
-            sub="↑ 2.3% (24h)"
-            subColor="#22c55e"
+            title="策略总数"
+            value={stats?.strategyCount ?? 0}
+            icon={<BookOutlined />}
+            color="var(--accent)"
+            link="/strategy-management"
           />
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <StatCard title="今日收益" value="$3,245.18" sub="↑ 1.8%" subColor="#22c55e" />
+          <StatCard
+            title="回测次数"
+            value={stats?.backtestCount ?? 0}
+            icon={<BarChartOutlined />}
+            color="#22c55e"
+            link="/backtest"
+          />
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <StatCard title="运行中策略" value="14" sub="较昨日 +2" />
+          <StatCard
+            title="自选股数量"
+            value={stats?.watchlistCount ?? 0}
+            icon={<ThunderboltOutlined />}
+            color="#f59e0b"
+          />
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <StatCard title="风险指标" value="0.24" sub="↑ 0.05 (需关注)" subColor="#ef4444" />
+          <StatCard
+            title="事件数据量"
+            value={stats?.dataCoverage?.events ?? 0}
+            icon={<DatabaseOutlined />}
+            color="#a855f7"
+          />
         </Col>
       </Row>
 
-      {/* Trend + Pie */}
+      {/* Recent Backtests + Top Strategies */}
       <Row gutter={[16, 16]}>
-        <Col xs={24} lg={16}>
+        <Col xs={24} lg={12}>
           <Card
             style={{
               borderRadius: 'var(--radius)',
@@ -422,35 +459,32 @@ export default function Dashboard() {
             }}
             title={
               <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--text-primary)' }}>
-                资产组合走势
+                <ClockCircleOutlined style={{ marginRight: 8, color: 'var(--accent)' }} />
+                最近回测
               </span>
             }
             extra={
-              <Space size={4}>
-                {timeRanges.map(r => (
-                  <Button
-                    key={r}
-                    type={timeRange === r ? 'primary' : 'text'}
-                    size="small"
-                    onClick={() => setTimeRange(r)}
-                    style={{
-                      borderRadius: 6,
-                      fontSize: 12,
-                      minWidth: 36,
-                      background: timeRange === r ? '#eff6ff' : 'transparent',
-                      color: timeRange === r ? '#3b82f6' : 'var(--text-muted)',
-                    }}
-                  >
-                    {r}
-                  </Button>
-                ))}
-              </Space>
+              <Link to="/backtest" style={{ fontSize: 13, color: 'var(--accent)' }}>
+                查看全部 →
+              </Link>
             }
           >
-            <ReactECharts option={trendOption} style={{ height: 300 }} />
+            {dashboardLoading ? (
+              <Empty description="加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            ) : !dashboardData?.recentBacktests?.length ? (
+              <Empty description="暂无回测记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            ) : (
+              <Table
+                columns={backtestColumns}
+                dataSource={dashboardData.recentBacktests}
+                rowKey="id"
+                pagination={false}
+                size="small"
+              />
+            )}
           </Card>
         </Col>
-        <Col xs={24} lg={8}>
+        <Col xs={24} lg={12}>
           <Card
             style={{
               borderRadius: 'var(--radius)',
@@ -459,72 +493,32 @@ export default function Dashboard() {
             }}
             title={
               <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--text-primary)' }}>
-                策略分布
+                <BarChartOutlined style={{ marginRight: 8, color: '#22c55e' }} />
+                收益排行
               </span>
             }
             extra={
-              <Space size={4}>
-                {distModes.map(m => (
-                  <Button
-                    key={m}
-                    type={distMode === m ? 'primary' : 'text'}
-                    size="small"
-                    onClick={() => setDistMode(m)}
-                    style={{
-                      borderRadius: 6,
-                      fontSize: 12,
-                      minWidth: 36,
-                      background: distMode === m ? '#eff6ff' : 'transparent',
-                      color: distMode === m ? '#3b82f6' : 'var(--text-muted)',
-                    }}
-                  >
-                    {m}
-                  </Button>
-                ))}
-              </Space>
+              <Link to="/strategy-management" style={{ fontSize: 13, color: 'var(--accent)' }}>
+                策略管理 →
+              </Link>
             }
           >
-            <ReactECharts option={pieOption} style={{ height: 300 }} />
+            {dashboardLoading ? (
+              <Empty description="加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            ) : !dashboardData?.topStrategies?.length ? (
+              <Empty description="暂无策略收益数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            ) : (
+              <Table
+                columns={topStrategyColumns}
+                dataSource={dashboardData.topStrategies}
+                rowKey="id"
+                pagination={false}
+                size="small"
+              />
+            )}
           </Card>
         </Col>
       </Row>
-
-      {/* Kline */}
-      <Card
-        style={{
-          borderRadius: 'var(--radius)',
-          border: '1px solid var(--border)',
-          background: 'var(--bg-surface)',
-        }}
-        title={
-          <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--text-primary)' }}>
-            实时行情 - BTC/USDT
-          </span>
-        }
-        extra={
-          <Space size={4}>
-            {klinePeriods.map(p => (
-              <Button
-                key={p}
-                type={klinePeriod === p ? 'primary' : 'text'}
-                size="small"
-                onClick={() => setKlinePeriod(p)}
-                style={{
-                  borderRadius: 6,
-                  fontSize: 12,
-                  minWidth: 36,
-                  background: klinePeriod === p ? '#eff6ff' : 'transparent',
-                  color: klinePeriod === p ? '#3b82f6' : 'var(--text-muted)',
-                }}
-              >
-                {p}
-              </Button>
-            ))}
-          </Space>
-        }
-      >
-        <ReactECharts option={klineOption} style={{ height: 320 }} />
-      </Card>
 
       {/* Watchlist */}
       <Card

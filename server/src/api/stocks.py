@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from src.api.auth import get_current_user
 from src.api.common import success_response
 from src.api.deps import _get_stock_by_code, get_db
-from src.models import crud
+from src.models import crud, models
 from src.models.models import User
 from src.services.stock_data import stock_service
 
@@ -90,3 +90,54 @@ async def get_kline(code: str, period: str = "daily"):
     else:
         klines = stock_service.get_a_stock_kline(code, period)
     return klines
+
+
+@router.get("/{code}/event-factors")
+async def get_event_factors(
+    code: str,
+    start: str | None = None,
+    end: str | None = None,
+    db: Session = Depends(get_db),
+):
+    from datetime import datetime
+
+    query = db.query(models.EventFactor).filter(models.EventFactor.symbol == code)
+    if start:
+        query = query.filter(models.EventFactor.trade_date >= datetime.strptime(start, "%Y-%m-%d"))
+    if end:
+        query = query.filter(models.EventFactor.trade_date <= datetime.strptime(end, "%Y-%m-%d"))
+
+    factors = query.order_by(models.EventFactor.trade_date.desc()).all()
+    return success_response(
+        data=[
+            {
+                "id": f.id,
+                "symbol": f.symbol,
+                "tradeDate": f.trade_date.strftime("%Y-%m-%d") if f.trade_date else None,
+                "individualEvents": f.individual_events,
+                "sectorEvents": f.sector_events,
+                "marketEvents": f.market_events,
+                "composite": f.composite,
+            }
+            for f in factors
+        ]
+    )
+
+
+@router.get("/{code}/sector")
+async def get_stock_sector(code: str, db: Session = Depends(get_db)):
+    mapping = (
+        db.query(models.StockSectorMapping)
+        .filter(models.StockSectorMapping.stock_code == code)
+        .first()
+    )
+    if not mapping:
+        return success_response(data=None)
+    return success_response(
+        data={
+            "sector": mapping.sector,
+            "sectorCode": mapping.sector_code,
+            "industryLevel1": mapping.industry_level1,
+            "industryLevel2": mapping.industry_level2,
+        }
+    )

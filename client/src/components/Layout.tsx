@@ -15,19 +15,37 @@ import {
   UserOutlined,
   SearchOutlined,
   FileTextOutlined,
+  CheckOutlined,
+  AlertOutlined,
+  ApiOutlined,
+  ScheduleOutlined,
+  SafetyCertificateOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons'
 import api, { quantApi } from '../services/api'
+import { useTheme } from '../hooks/useTheme'
+import type { ThemeKey } from '../styles/themes'
 
 const navItems = [
   { key: '/', label: '仪表盘', icon: DashboardOutlined },
   { key: '/market-analysis', label: '行情分析', icon: LineChartOutlined },
-  { key: '/strategy-management', label: '策略管理', icon: SettingOutlined },
-  { key: '/portfolio', label: '资产组合', icon: FundOutlined },
-  { key: '/settings', label: '系统设置', icon: SettingOutlined },
+  { key: '/strategy-management', label: '策略管理', icon: ExperimentOutlined },
   { key: '/strategy-library', label: '策略库', icon: BookOutlined },
   { key: '/backtest', label: '回测报告', icon: BarChartOutlined },
+  { key: '/portfolio', label: '资产组合', icon: FundOutlined },
+  { key: '/events', label: '事件查询', icon: AlertOutlined },
+  { key: '/event-sources', label: '数据源配置', icon: ApiOutlined },
+  { key: '/event-jobs', label: '采集任务', icon: ScheduleOutlined },
+  { key: '/event-rules', label: '规则管理', icon: SafetyCertificateOutlined },
   { key: '/data-management', label: '数据管理', icon: DatabaseOutlined },
+  { key: '/settings', label: '系统设置', icon: SettingOutlined },
 ]
+
+const themeSwatches: Record<ThemeKey, string> = {
+  'ocean-blue': '#0ea5e9',
+  'dawn-white': '#4f46e5',
+  'midnight-black': '#d946ef',
+}
 
 export default function Layout() {
   const location = useLocation()
@@ -35,6 +53,7 @@ export default function Layout() {
   const [unreadCount, setUnreadCount] = useState(3)
   const [username, setUsername] = useState<string | null>(null)
   const [searchText, setSearchText] = useState('')
+  const { currentTheme, setTheme, themeList } = useTheme()
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -66,6 +85,29 @@ export default function Layout() {
     localStorage.removeItem('username')
     window.location.href = '/login'
   }
+
+  const themeMenuItems: MenuProps['items'] = themeList.map(t => ({
+    key: t.key,
+    label: (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span
+          style={{
+            width: 14,
+            height: 14,
+            borderRadius: '50%',
+            background: themeSwatches[t.key],
+            boxShadow: `0 0 0 2px ${currentTheme === t.key ? themeSwatches[t.key] + '40' : 'transparent'}`,
+            transition: 'box-shadow 0.2s ease',
+          }}
+        />
+        <span style={{ flex: 1 }}>{t.label}</span>
+        {currentTheme === t.key && (
+          <CheckOutlined style={{ fontSize: 12, color: 'var(--accent)' }} />
+        )}
+      </span>
+    ),
+    onClick: () => setTheme(t.key),
+  }))
 
   const userMenuItems: MenuProps['items'] = [
     {
@@ -120,10 +162,10 @@ export default function Layout() {
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 180 }}>
           <span
+            className="gradient-text"
             style={{
               fontSize: 20,
               fontWeight: 700,
-              color: '#3b82f6',
               letterSpacing: 0.5,
             }}
           >
@@ -148,7 +190,51 @@ export default function Layout() {
         </div>
 
         {/* Global controls */}
-        <Space size={20}>
+        <Space size={16}>
+          {/* 主题切换 */}
+          <Dropdown
+            menu={{ items: themeMenuItems }}
+            placement="bottomRight"
+            arrow
+            overlayStyle={{ minWidth: 160 }}
+          >
+            <button
+              data-testid="theme-switcher"
+              aria-label="切换主题"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 34,
+                height: 34,
+                borderRadius: '50%',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-elevated)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                position: 'relative',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = 'var(--accent)'
+                e.currentTarget.style.boxShadow = 'var(--shadow-glow)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'var(--border)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  background: `linear-gradient(135deg, ${themeSwatches[currentTheme]} 0%, var(--accent-hover) 100%)`,
+                  display: 'block',
+                }}
+              />
+            </button>
+          </Dropdown>
+
           {/* 告警入口 */}
           <Link
             to="/alerts"
@@ -258,8 +344,8 @@ export default function Layout() {
                     padding: '10px 16px',
                     margin: '2px 8px',
                     borderRadius: 8,
-                    color: isActive ? '#3b82f6' : 'var(--text-secondary)',
-                    background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                    color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                    background: isActive ? 'var(--accent-soft)' : 'transparent',
                     fontSize: 14,
                     fontWeight: 500,
                     textDecoration: 'none',

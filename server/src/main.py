@@ -5,7 +5,20 @@ from alembic.config import Config as AlembicConfig
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api import ai, auth, news, portfolio, quant, screener, seed, stocks
+from src.api import (
+    ai,
+    auth,
+    dashboard,
+    events,
+    factor_snapshots,
+    news,
+    portfolio,
+    quant,
+    screener,
+    seed,
+    stocks,
+    strategies,
+)
 from src.core.config import settings
 from src.core.docs_auth import DocsAuthMiddleware
 from src.core.exceptions import register_exception_handlers
@@ -19,9 +32,25 @@ def _run_migrations():
     command.upgrade(alembic_cfg, "head")
 
 
+def _run_seeds():
+    try:
+        from src.seed_builtin_strategies import main as seed_strategies
+        from src.seed_event_defaults import main as seed_events
+        from src.seed_stocks import main as seed_stocks
+
+        seed_stocks()
+        seed_strategies()
+        seed_events()
+    except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).warning(f"Seed failed (may already exist): {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _run_migrations()
+    _run_seeds()
     await scheduler_service.start()
     yield
     await scheduler_service.stop()
@@ -55,6 +84,10 @@ app.include_router(portfolio.router, prefix="/api")
 app.include_router(quant.router, prefix="/api")
 app.include_router(screener.router, prefix="/api")
 app.include_router(seed.router, prefix="/api")
+app.include_router(events.router, prefix="/api")
+app.include_router(strategies.router, prefix="/api")
+app.include_router(factor_snapshots.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
 
 
 @app.get("/api/health")

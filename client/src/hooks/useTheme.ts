@@ -26,12 +26,37 @@ function getInitialThemeKey(): ThemeKey {
   return defaultThemeKey
 }
 
+const THEME_CHANGE_EVENT = 'quant-ai:themechange'
+
 export function useTheme() {
   const [currentTheme, setCurrentThemeState] = useState<ThemeKey>(getInitialThemeKey)
 
   useEffect(() => {
     applyCssVars(themes[currentTheme])
   }, [currentTheme])
+
+  /* 跨标签页同步 */
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key === storageKey && e.newValue && themes[e.newValue as ThemeKey]) {
+        setCurrentThemeState(e.newValue as ThemeKey)
+      }
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [])
+
+  /* 同窗口跨组件同步 */
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<ThemeKey>).detail
+      if (detail && themes[detail]) {
+        setCurrentThemeState(detail)
+      }
+    }
+    window.addEventListener(THEME_CHANGE_EVENT, handler)
+    return () => window.removeEventListener(THEME_CHANGE_EVENT, handler)
+  }, [])
 
   const setTheme = useCallback((key: ThemeKey) => {
     if (!themes[key]) return
@@ -41,6 +66,7 @@ export function useTheme() {
     } catch {
       // ignore
     }
+    window.dispatchEvent(new CustomEvent(THEME_CHANGE_EVENT, { detail: key }))
   }, [])
 
   const themeConfig = themes[currentTheme]

@@ -76,6 +76,41 @@ GET /api/stocks/600519/kline?period=daily
 支持周期: daily, weekly, monthly (A股); 1d, 1mo, 3mo, 6mo, 1y (港股/美股)
 Response: 直接返回 K线数组
 
+### 查询事件因子
+```
+GET /api/stocks/600519/event-factors?start=2025-01-01&end=2025-01-31
+```
+Response:
+```json
+{
+  "code": 0,
+  "data": [
+    {
+      "symbol": "600519",
+      "tradeDate": "2025-01-15",
+      "individualEvents": { "news_count": 5, "avg_sentiment": 0.45 },
+      "sectorEvents": { "avg_sentiment": 0.12 },
+      "marketEvents": { "avg_sentiment": -0.05 },
+      "composite": 0.23
+    }
+  ],
+  "message": "ok"
+}
+```
+
+### 查询股票板块
+```
+GET /api/stocks/600519/sector
+```
+Response:
+```json
+{
+  "code": 0,
+  "data": { "sector": "酒、饮料和精制茶制造业", "sectorCode": "C15" },
+  "message": "ok"
+}
+```
+
 ## 数据模型
 
 ### stocks 表
