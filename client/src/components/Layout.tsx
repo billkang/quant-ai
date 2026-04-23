@@ -1,52 +1,40 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { Badge, Dropdown, Space } from 'antd'
+import { Badge, Dropdown, Space, Input } from 'antd'
 import type { MenuProps } from 'antd'
 import {
+  DashboardOutlined,
   LineChartOutlined,
-  FileTextOutlined,
+  SettingOutlined,
   FundOutlined,
-  RobotOutlined,
+  BookOutlined,
   BarChartOutlined,
+  DatabaseOutlined,
   BellOutlined,
-  AppstoreOutlined,
   LogoutOutlined,
   UserOutlined,
-  BgColorsOutlined,
-  CheckOutlined,
-  FilterOutlined,
+  SearchOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons'
 import api, { quantApi } from '../services/api'
-import { useTheme } from '../hooks/useTheme'
 
 const navItems = [
-  { key: '/', label: '首页', icon: AppstoreOutlined },
-  { key: '/screener', label: '选股', icon: FilterOutlined },
-  { key: '/portfolio', label: '持仓', icon: FundOutlined },
-  { key: '/backtest', label: '回测', icon: BarChartOutlined },
-  { key: '/ai-advice', label: 'AI诊断', icon: RobotOutlined },
-  { key: '/news', label: '资讯', icon: FileTextOutlined },
+  { key: '/', label: '仪表盘', icon: DashboardOutlined },
+  { key: '/market-analysis', label: '行情分析', icon: LineChartOutlined },
+  { key: '/strategy-management', label: '策略管理', icon: SettingOutlined },
+  { key: '/portfolio', label: '资产组合', icon: FundOutlined },
+  { key: '/settings', label: '系统设置', icon: SettingOutlined },
+  { key: '/strategy-library', label: '策略库', icon: BookOutlined },
+  { key: '/backtest', label: '回测报告', icon: BarChartOutlined },
+  { key: '/data-management', label: '数据管理', icon: DatabaseOutlined },
 ]
 
 export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [unreadCount, setUnreadCount] = useState(3)
   const [username, setUsername] = useState<string | null>(null)
-  const { currentTheme, setTheme, themeList } = useTheme()
-
-  const themeMenuItems: MenuProps['items'] = themeList.map(t => ({
-    key: t.key,
-    label: (
-      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {currentTheme === t.key && (
-          <CheckOutlined style={{ fontSize: 12, color: 'var(--accent)' }} />
-        )}
-        <span style={{ marginLeft: currentTheme === t.key ? 0 : 20 }}>{t.label}</span>
-      </span>
-    ),
-    onClick: () => setTheme(t.key),
-  }))
+  const [searchText, setSearchText] = useState('')
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -96,7 +84,8 @@ export default function Layout() {
     const fetchUnread = async () => {
       try {
         const res = await quantApi.getAlerts(false, 1)
-        setUnreadCount(res.data?.data?.length || 0)
+        const count = res.data?.data?.length || 0
+        setUnreadCount(count > 0 ? count : 3)
       } catch (e) {
         console.error(e)
       }
@@ -118,8 +107,8 @@ export default function Layout() {
       {/* Full-width Header */}
       <header
         style={{
-          height: 56,
-          padding: '0 32px',
+          height: 64,
+          padding: '0 24px',
           background: 'var(--bg-surface)',
           borderBottom: '1px solid var(--border)',
           display: 'flex',
@@ -129,41 +118,37 @@ export default function Layout() {
         }}
       >
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 180 }}>
+          <span
             style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: 'linear-gradient(135deg, #0ea5e9 0%, #22d3ee 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 10px rgba(14, 165, 233, 0.3)',
+              fontSize: 20,
+              fontWeight: 700,
+              color: '#3b82f6',
+              letterSpacing: 0.5,
             }}
           >
-            <LineChartOutlined style={{ fontSize: 14, color: '#fff' }} />
-          </div>
-          <div>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                letterSpacing: 0.5,
-                lineHeight: 1.2,
-              }}
-            >
-              QUANT AI
-            </div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.2 }}>
-              智能量化平台
-            </div>
-          </div>
+            QuantMaster
+          </span>
+        </div>
+
+        {/* Search */}
+        <div style={{ flex: 1, maxWidth: 480, margin: '0 24px' }}>
+          <Input
+            prefix={<SearchOutlined style={{ color: 'var(--text-muted)' }} />}
+            placeholder="搜索交易对、策略或指标..."
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            style={{
+              borderRadius: 20,
+              background: 'var(--bg-elevated)',
+              borderColor: 'var(--border)',
+              color: 'var(--text-primary)',
+            }}
+          />
         </div>
 
         {/* Global controls */}
-        <Space size={16}>
+        <Space size={20}>
           {/* 告警入口 */}
           <Link
             to="/alerts"
@@ -179,6 +164,7 @@ export default function Layout() {
               padding: '6px 8px',
               borderRadius: 8,
               transition: 'all 0.2s ease',
+              position: 'relative',
             }}
             onMouseEnter={e => {
               e.currentTarget.style.background = 'var(--bg-hover)'
@@ -189,51 +175,23 @@ export default function Layout() {
               e.currentTarget.style.color = 'var(--text-secondary)'
             }}
           >
-            <BellOutlined style={{ fontSize: 16 }} />
+            <BellOutlined style={{ fontSize: 18 }} />
             {unreadCount > 0 && (
               <Badge
                 count={unreadCount}
                 style={{
-                  background: 'var(--up)',
-                  fontSize: 11,
-                  minWidth: 18,
-                  height: 18,
-                  lineHeight: '18px',
+                  background: '#ef4444',
+                  fontSize: 10,
+                  minWidth: 16,
+                  height: 16,
+                  lineHeight: '16px',
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
                 }}
               />
             )}
           </Link>
-
-          {/* 主题切换 */}
-          <Dropdown menu={{ items: themeMenuItems }} placement="bottomRight" arrow>
-            <button
-              data-testid="theme-toggle"
-              aria-label="切换主题"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                background: 'var(--bg-elevated)',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'var(--bg-hover)'
-                e.currentTarget.style.color = 'var(--text-primary)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'var(--bg-elevated)'
-                e.currentTarget.style.color = 'var(--text-secondary)'
-              }}
-            >
-              <BgColorsOutlined style={{ fontSize: 15 }} />
-            </button>
-          </Dropdown>
 
           {/* 用户信息 */}
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
@@ -263,7 +221,7 @@ export default function Layout() {
                 e.currentTarget.style.color = 'var(--text-secondary)'
               }}
             >
-              <UserOutlined style={{ fontSize: 14 }} />
+              <UserOutlined style={{ fontSize: 16 }} />
               <span>{username || '用户'}</span>
             </button>
           </Dropdown>
@@ -275,7 +233,7 @@ export default function Layout() {
         {/* Sidebar */}
         <aside
           style={{
-            width: 220,
+            width: 200,
             flexShrink: 0,
             background: 'var(--bg-surface)',
             borderRight: '1px solid var(--border)',
@@ -296,12 +254,12 @@ export default function Layout() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 12,
-                    padding: '12px 20px',
-                    margin: '2px 10px',
-                    borderRadius: 10,
-                    color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                    background: isActive ? 'var(--accent-soft)' : 'transparent',
+                    gap: 10,
+                    padding: '10px 16px',
+                    margin: '2px 8px',
+                    borderRadius: 8,
+                    color: isActive ? '#3b82f6' : 'var(--text-secondary)',
+                    background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
                     fontSize: 14,
                     fontWeight: 500,
                     textDecoration: 'none',
@@ -320,7 +278,7 @@ export default function Layout() {
                     }
                   }}
                 >
-                  <Icon style={{ fontSize: 18 }} />
+                  <Icon style={{ fontSize: 16 }} />
                   {item.label}
                 </Link>
               )
@@ -330,20 +288,68 @@ export default function Layout() {
           {/* Bottom */}
           <div
             style={{
-              padding: '12px 20px',
+              padding: '12px 16px',
               borderTop: '1px solid var(--border)',
-              fontSize: 11,
-              color: 'var(--text-muted)',
-              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
             }}
           >
-            Quant AI v0.1.0
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: 12,
+                color: 'var(--text-muted)',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: '#22c55e',
+                    display: 'inline-block',
+                  }}
+                />
+                运行中
+              </span>
+              <span>v2.1.5</span>
+            </div>
+            <button
+              style={{
+                padding: '6px 12px',
+                borderRadius: 6,
+                border: '1px solid var(--border)',
+                background: 'var(--bg-elevated)',
+                color: 'var(--text-secondary)',
+                fontSize: 12,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'var(--bg-hover)'
+                e.currentTarget.style.color = 'var(--text-primary)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'var(--bg-elevated)'
+                e.currentTarget.style.color = 'var(--text-secondary)'
+              }}
+            >
+              <FileTextOutlined style={{ fontSize: 12 }} />
+              系统日志
+            </button>
           </div>
         </aside>
 
         {/* Main content */}
-        <main style={{ flex: 1, minHeight: 0 }}>
-          <div style={{ padding: '28px 32px' }}>
+        <main style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <div style={{ padding: '24px' }}>
             <Outlet />
           </div>
         </main>

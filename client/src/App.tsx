@@ -10,6 +10,11 @@ import Backtest from './pages/Backtest'
 import Alerts from './pages/Alerts'
 import Login from './pages/Login'
 import Screener from './pages/Screener'
+import MarketAnalysis from './pages/MarketAnalysis'
+import StrategyManagement from './pages/StrategyManagement'
+import StrategyLibrary from './pages/StrategyLibrary'
+import DataManagement from './pages/DataManagement'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -26,6 +31,11 @@ function App() {
             <Route path="screener" element={<Screener />} />
             <Route path="backtest" element={<Backtest />} />
             <Route path="alerts" element={<Alerts />} />
+            <Route path="market-analysis" element={<MarketAnalysis />} />
+            <Route path="strategy-management" element={<StrategyManagement />} />
+            <Route path="strategy-library" element={<StrategyLibrary />} />
+            <Route path="data-management" element={<DataManagement />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </BrowserRouter>

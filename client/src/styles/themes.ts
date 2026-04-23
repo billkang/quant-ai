@@ -153,5 +153,5 @@ export const themes: Record<ThemeKey, ThemeConfig> = {
 
 export const themeList = Object.values(themes)
 
-export const defaultThemeKey: ThemeKey = 'ocean-blue'
+export const defaultThemeKey: ThemeKey = 'dawn-white'
 export const storageKey = 'quant-ai-theme'
