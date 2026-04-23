@@ -87,13 +87,18 @@ export interface ChatResponse {
 // ---- Portfolio ----
 
 export interface Position {
+  id?: number
+  backtestTaskId?: number
+  strategyId?: number
   code: string
   name: string
   quantity: number
-  costPrice: number
+  avgCost: number
   currentPrice: number
+  unrealizedPnl?: number
   profit: number
   profitPercent: number
+  isActive?: number
 }
 
 export interface PortfolioData {
@@ -332,4 +337,80 @@ export interface StrategyVersion {
   params_schema: Record<string, unknown> | null
   changelog: string | null
   created_at: string
+}
+
+// ---- Paper Trading ----
+
+export interface PaperAccountData {
+  initialCash: number
+  availableCash: number
+  totalMarketValue: number
+  totalAssets: number
+  totalProfit: number
+  totalProfitPercent: number
+}
+
+export interface PaperPositionItem {
+  code: string
+  name: string
+  quantity: number
+  costPrice: number
+  currentPrice: number
+  marketValue: number
+  profit: number
+  profitPercent: number
+}
+
+export interface PaperOrderItem {
+  id: number
+  stock_code: string
+  stock_name: string
+  side: string
+  quantity: number
+  price: number
+  amount: number
+  status: string
+  created_at: string
+}
+
+// ---- Research Report ----
+
+export interface ResearchReportItem {
+  id: number
+  symbol: string
+  title: string
+  source: string | null
+  author: string | null
+  rating: string | null
+  targetPrice: number | null
+  publishDate: string | null
+  summary: string | null
+}
+
+export interface StockNoticeItem {
+  id: number
+  symbol: string
+  title: string
+  category: string | null
+  source: string | null
+  publishDate: string | null
+  url: string | null
+}
+
+// ---- Notification ----
+
+export interface NotificationSettingData {
+  email: { enabled: boolean; address: string }
+  webhook: { enabled: boolean; url: string }
+  channels: Record<string, string[]>
+}
+
+export interface NotificationItem {
+  id: number
+  type: string
+  title: string
+  content: string | null
+  channels: string[]
+  isRead: boolean
+  createdAt: string
 }

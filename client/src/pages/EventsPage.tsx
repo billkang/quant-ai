@@ -13,10 +13,13 @@ import {
   Select,
   Drawer,
   Descriptions,
+  Typography,
 } from 'antd'
 import { SearchOutlined, ReloadOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons'
 import { eventApi } from '../services/api'
 import type { EventItem } from '../types/api'
+
+const { Title, Text } = Typography
 
 export default function EventsPage() {
   const [events, setEvents] = useState<EventItem[]>([])
@@ -174,10 +177,12 @@ export default function EventsPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
-        <h2 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>事件查询</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: '4px 0 0' }}>
+        <Title level={3} style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>
+          事件查询
+        </Title>
+        <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
           浏览和管理系统采集的事件信号
-        </p>
+        </Text>
       </div>
 
       <Card

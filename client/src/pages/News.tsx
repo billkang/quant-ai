@@ -274,11 +274,18 @@ export default function News() {
         </Text>
       </div>
 
-      <Card bodyStyle={{ padding: '16px 20px' }}>
+      <Card
+        bodyStyle={{ padding: '16px 20px' }}
+        title={
+          <Space>
+            <StockOutlined style={{ color: 'var(--accent)' }} />
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>选择股票</span>
+          </Space>
+        }
+      >
         <Space size={16} wrap>
-          <StockOutlined style={{ fontSize: 18, color: 'var(--accent)' }} />
           <Text strong style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
-            选择股票
+            股票代码
           </Text>
           <Select
             style={{ width: 280 }}

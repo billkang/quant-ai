@@ -72,7 +72,7 @@ class TestStocksAPI:
         assert response.status_code == 200
 
     def test_add_and_remove_watchlist(self):
-        response = client.post("/api/stocks/watchlist?stock_code=000001")
+        response = client.post("/api/stocks/watchlist", json={"stock_code": "000001"})
         assert response.status_code == 200
 
         response = client.delete("/api/stocks/watchlist/000001")

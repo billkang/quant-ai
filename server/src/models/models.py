@@ -447,3 +447,113 @@ class StrategyPosition(Base):
     buy_date = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# ───────────────────────────────────────────────
+#  Paper Trading
+# ───────────────────────────────────────────────
+
+
+class PaperAccount(Base):
+    __tablename__ = "paper_accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    initial_cash = Column(Float, default=1000000)
+    available_cash = Column(Float, default=1000000)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PaperPosition(Base):
+    __tablename__ = "paper_positions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    stock_code = Column(String(20), index=True)
+    stock_name = Column(String(100))
+    quantity = Column(Integer)
+    cost_price = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PaperOrder(Base):
+    __tablename__ = "paper_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    stock_code = Column(String(20))
+    stock_name = Column(String(100))
+    side = Column(String(10))  # buy / sell
+    quantity = Column(Integer)
+    price = Column(Float)
+    amount = Column(Float)
+    status = Column(String(20), default="filled")  # filled / pending / cancelled
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ───────────────────────────────────────────────
+#  Research Reports & Notices
+# ───────────────────────────────────────────────
+
+
+class ResearchReport(Base):
+    __tablename__ = "research_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String(20), index=True, nullable=False)
+    title = Column(String(500), nullable=False)
+    source = Column(String(100), nullable=True)
+    author = Column(String(100), nullable=True)
+    rating = Column(String(20), nullable=True)
+    target_price = Column(Float, nullable=True)
+    summary = Column(Text, nullable=True)
+    publish_date = Column(DateTime, nullable=True)
+    url = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class StockNotice(Base):
+    __tablename__ = "stock_notices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String(20), index=True, nullable=False)
+    title = Column(String(500), nullable=False)
+    category = Column(String(50), nullable=True)
+    source = Column(String(100), nullable=True)
+    publish_date = Column(DateTime, nullable=True)
+    url = Column(String(500), unique=True, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ───────────────────────────────────────────────
+#  Notification System
+# ───────────────────────────────────────────────
+
+
+class NotificationSetting(Base):
+    __tablename__ = "notification_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    email_enabled = Column(Integer, default=0)
+    email_address = Column(String(100), nullable=True)
+    webhook_enabled = Column(Integer, default=0)
+    webhook_url = Column(String(500), nullable=True)
+    channel_config = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    type = Column(String(50), nullable=False)
+    title = Column(String(200), nullable=False)
+    content = Column(String, nullable=True)
+    channels = Column(JSON, default=list)
+    is_read = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)

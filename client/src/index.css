@@ -118,7 +118,9 @@ body {
 
 .ant-input,
 .ant-input-number,
-.ant-select-selector {
+.ant-select-selector,
+.ant-input-affix-wrapper,
+textarea.ant-input {
   background: var(--bg-elevated) !important;
   border-color: var(--border) !important;
   color: var(--text-primary) !important;
@@ -126,19 +128,26 @@ body {
 }
 .ant-input::placeholder,
 .ant-input-number::placeholder,
-.ant-select-selector .ant-select-selection-placeholder {
+.ant-select-selector .ant-select-selection-placeholder,
+.ant-input-affix-wrapper .ant-input::placeholder,
+textarea.ant-input::placeholder,
+.ant-picker-input > input::placeholder {
   color: var(--text-muted) !important;
   opacity: 1 !important;
 }
 .ant-input:hover,
 .ant-input-number:hover,
-.ant-select-selector:hover {
+.ant-select-selector:hover,
+.ant-input-affix-wrapper:hover,
+textarea.ant-input:hover {
   border-color: var(--border-hover) !important;
 }
 .ant-input:focus,
 .ant-input-focused,
 .ant-input-number-focused,
-.ant-select-focused .ant-select-selector {
+.ant-select-focused .ant-select-selector,
+.ant-input-affix-wrapper-focused,
+textarea.ant-input:focus {
   border-color: var(--accent) !important;
   box-shadow: 0 0 0 2px var(--accent-soft) !important;
 }
@@ -174,6 +183,26 @@ body {
   border-bottom: 1px solid var(--border) !important;
 }
 .ant-modal-title {
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+}
+
+.ant-drawer-header {
+  background: var(--bg-surface) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.ant-drawer-title {
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+}
+.ant-drawer-body {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+}
+.ant-drawer-close {
+  color: var(--text-muted) !important;
+}
+.ant-drawer-close:hover {
   color: var(--text-primary) !important;
 }
 

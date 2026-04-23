@@ -204,7 +204,7 @@ export default function AIAdvice() {
           title={
             <Space>
               <BulbOutlined style={{ color: 'var(--accent)' }} />
-              <span style={{ fontWeight: 600 }}>诊断结果</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>诊断结果</span>
             </Space>
           }
         >
@@ -242,7 +242,7 @@ export default function AIAdvice() {
           title={
             <Space>
               <HistoryOutlined style={{ color: 'var(--accent)' }} />
-              <span style={{ fontWeight: 600 }}>诊断历史</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>诊断历史</span>
             </Space>
           }
         >

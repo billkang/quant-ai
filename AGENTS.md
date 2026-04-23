@@ -57,6 +57,51 @@ curl http://localhost:8000/api/quant/alerts
 5. **Backend config**: All tool configs live in `server/pyproject.toml` (ruff, mypy, pytest)
 6. **Tests are mandatory**: Every feature or bug-fix PR must include both unit tests and E2E tests. Do not treat tests as an afterthought.
 
+## Code Style Guide
+
+> **Pre-commit hooks are configured** to auto-fix most style issues. Run `pre-commit install` if you haven't already. Hooks auto-run on `git commit` (auto-fix) and `git push` (type-check).
+
+### Pre-commit / Pre-push Hooks
+
+```bash
+# Install hooks (one-time)
+pre-commit install
+
+# What runs automatically:
+# - git commit  → ruff --fix, ruff-format, eslint --fix, prettier --write
+# - git push    → mypy (server)
+```
+
+**Do not manually fix formatting or unused imports.** The hooks auto-fix them on commit. If a hook fails and modifies files, `git add` the changes and commit again.
+
+### Python (Backend)
+
+- **Formatter**: `ruff format` (configured in `server/pyproject.toml`)
+  - Line length: 100
+  - Double quotes, 4-space indentation
+- **Linter**: `ruff check --fix`
+  - Enabled rules: E, W, F, I (isort), B (bugbear), C4, UP (pyupgrade)
+  - Ignored: E501 (line too long), B008
+  - **Do NOT run manually — hooks handle it.**
+- **Type hints**: Use `from typing import Any` for dynamic dicts/lists. Use `cast()` for SQLAlchemy Column assignments.
+- **Imports**: Sort with `ruff check --fix` (isort rule). Group: stdlib → third-party → local (`src.*`).
+- **Naming**: Use `snake_case` for functions/variables, `PascalCase` for classes, `UPPER_CASE` for constants.
+- **SQLAlchemy**: Use `Column(..., nullable=True)` for optional fields. Use `default=dict` for JSON columns.
+
+### TypeScript / React (Frontend)
+
+- **Formatter**: `prettier` (config in `client/.prettierrc`)
+  - No semicolons, single quotes, 2-space indent, trailing commas (es5), printWidth 100
+- **Linter**: `eslint` (config in `client/eslint.config.js`)
+  - **Do NOT run manually — hooks handle it.**
+- **Key rules**:
+  - `@typescript-eslint/no-unused-vars` — prefix unused args with `_` to suppress
+  - `react-refresh/only-export-components` — page components should be default exports in separate files
+  - `react-hooks/exhaustive-deps` — ensure dependency arrays are correct
+- **Ant Design**: Use AntD components (`Button`, `Input`, `Table`, etc.) instead of raw HTML elements. Style with CSS variables (`var(--bg-surface)`, `var(--accent)`).
+- **Types**: Prefer explicit interfaces over `any`. When using `axios` responses, type them with `ApiResponse<T>`.
+- **Naming**: Use `PascalCase` for components/interfaces, `camelCase` for functions/variables, `UPPER_CASE` for constants.
+
 ## Services
 
 | Service | Port | URL |

@@ -22,7 +22,7 @@ import {
 import { eventApi } from '../services/api'
 import type { EventRule } from '../types/api'
 
-const { Text } = Typography
+const { Title, Text } = Typography
 
 export default function EventRulesPage() {
   const [rules, setRules] = useState<EventRule[]>([])
@@ -173,10 +173,12 @@ export default function EventRulesPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
-        <h2 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>提取规则管理</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: '4px 0 0' }}>
+        <Title level={3} style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>
+          提取规则管理
+        </Title>
+        <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
           管理事件信号的提取、分类和板块映射规则
-        </p>
+        </Text>
       </div>
 
       <Card

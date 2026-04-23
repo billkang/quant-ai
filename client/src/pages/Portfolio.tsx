@@ -6,21 +6,7 @@ import ReactECharts from 'echarts-for-react'
 
 const { Title, Text } = Typography
 
-interface VirtualPosition {
-  id?: number
-  backtestTaskId?: number
-  strategyId?: number
-  code: string
-  name: string
-  quantity: number
-  avgCost?: number
-  costPrice?: number
-  currentPrice: number
-  unrealizedPnl?: number
-  profit: number
-  profitPercent: number
-  isActive?: number
-}
+import type { Position, PortfolioData } from '../types/api'
 
 interface PortfolioAnalysis {
   sharpeRatio: number
@@ -31,12 +17,12 @@ interface PortfolioAnalysis {
 }
 
 export default function Portfolio() {
-  const [data, setData] = useState<{
-    positions: VirtualPosition[]
-    totalValue: number
-    totalCost: number
-    totalProfit: number
-  }>({ positions: [], totalValue: 0, totalCost: 0, totalProfit: 0 })
+  const [data, setData] = useState<PortfolioData>({
+    positions: [],
+    totalValue: 0,
+    totalCost: 0,
+    totalProfit: 0,
+  })
   const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -49,15 +35,8 @@ export default function Portfolio() {
     try {
       setLoading(true)
       const res = await portfolioApi.getPortfolio()
-      if (res.data) {
-        setData(
-          res.data as {
-            positions: VirtualPosition[]
-            totalValue: number
-            totalCost: number
-            totalProfit: number
-          }
-        )
+      if (res.data?.code === 0 && res.data.data) {
+        setData(res.data.data)
       }
     } catch (error) {
       console.error('Failed to fetch portfolio:', error)
@@ -142,7 +121,7 @@ export default function Portfolio() {
       title: '股票',
       key: 'name',
       width: '20%',
-      render: (_: unknown, record: VirtualPosition) => (
+      render: (_: unknown, record: Position) => (
         <Space direction="vertical" size={0}>
           <Text strong style={{ fontSize: 15, color: 'var(--text-primary)' }}>
             {record.name}

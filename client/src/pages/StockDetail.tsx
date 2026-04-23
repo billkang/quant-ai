@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactECharts from 'echarts-for-react'
-import { Card, Row, Col, Button, Space, Spin, Tag, Tabs } from 'antd'
+import { Card, Row, Col, Button, Space, Spin, Tag, Tabs, Table } from 'antd'
 import {
   ArrowUpOutlined,
   ArrowDownOutlined,
@@ -9,8 +9,10 @@ import {
   StockOutlined,
   AreaChartOutlined,
   InfoCircleOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons'
-import { quantApi, stockApi } from '../services/api'
+import { quantApi, stockApi, researchApi } from '../services/api'
+import type { ResearchReportItem, StockNoticeItem } from '../types/api'
 
 interface StockData {
   code: string
@@ -74,6 +76,8 @@ export default function StockDetail() {
   const [fundamentals, setFundamentals] = useState<Fundamentals | null>(null)
   const [period, setPeriod] = useState('daily')
   const [loading, setLoading] = useState(true)
+  const [reports, setReports] = useState<ResearchReportItem[]>([])
+  const [notices, setNotices] = useState<StockNoticeItem[]>([])
 
   useEffect(() => {
     if (!code) return
@@ -100,6 +104,12 @@ export default function StockDetail() {
     })
     quantApi.getFundamentals(code).then(res => {
       if (res.data?.code === 0) setFundamentals(res.data.data)
+    })
+    researchApi.getReports(code).then(res => {
+      if (res.data?.code === 0) setReports(res.data.data || [])
+    })
+    researchApi.getNotices(code).then(res => {
+      if (res.data?.code === 0) setNotices(res.data.data || [])
     })
   }, [code])
 
@@ -591,6 +601,65 @@ export default function StockDetail() {
             </Row>
           </Card>
         )}
+
+        {/* Research Reports & Notices */}
+        <Card
+          title={
+            <Space>
+              <FileTextOutlined style={{ color: 'var(--accent)' }} />
+              <span style={{ fontWeight: 600 }}>研报与公告</span>
+            </Space>
+          }
+        >
+          <Tabs
+            items={[
+              {
+                key: 'reports',
+                label: '研报',
+                children: (
+                  <Table
+                    dataSource={reports}
+                    rowKey="id"
+                    size="small"
+                    pagination={false}
+                    locale={{ emptyText: '暂无研报数据' }}
+                    columns={[
+                      { title: '标题', dataIndex: 'title', key: 'title' },
+                      { title: '来源', dataIndex: 'source', key: 'source' },
+                      { title: '评级', dataIndex: 'rating', key: 'rating' },
+                      {
+                        title: '目标价',
+                        dataIndex: 'targetPrice',
+                        key: 'targetPrice',
+                        render: (v: number) => v || '-',
+                      },
+                      { title: '日期', dataIndex: 'publishDate', key: 'publishDate' },
+                    ]}
+                  />
+                ),
+              },
+              {
+                key: 'notices',
+                label: '公告',
+                children: (
+                  <Table
+                    dataSource={notices}
+                    rowKey="id"
+                    size="small"
+                    pagination={false}
+                    locale={{ emptyText: '暂无公告数据' }}
+                    columns={[
+                      { title: '标题', dataIndex: 'title', key: 'title' },
+                      { title: '分类', dataIndex: 'category', key: 'category' },
+                      { title: '来源', dataIndex: 'source', key: 'source' },
+                      { title: '日期', dataIndex: 'publishDate', key: 'publishDate' },
+                    ]}
+                  />
+                ),
+              },
+            ]}
+          />
+        </Card>
       </div>
     </Spin>
   )

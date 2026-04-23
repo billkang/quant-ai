@@ -10,21 +10,33 @@ repos:
 
   - repo: local
     hooks:
+      - id: eslint-fix
+        name: eslint --fix (client)
+        entry: bash -c 'cd client && pnpm exec eslint --fix src/'
+        language: system
+        pass_filenames: false
+        always_run: false
+        stages: [pre-commit]
+        files: ^client/.*\.(ts|tsx)$
+
+  - repo: local
+    hooks:
+      - id: prettier-fix
+        name: prettier --write (client)
+        entry: bash -c 'cd client && pnpm exec prettier --write src/'
+        language: system
+        pass_filenames: false
+        always_run: false
+        stages: [pre-commit]
+        files: ^client/.*\.(ts|tsx|css|json)$
+
+  - repo: local
+    hooks:
       - id: mypy
         name: mypy (server)
         entry: bash -c 'cd server && uv run --extra dev mypy src'
         language: system
         pass_filenames: false
         always_run: false
-        stages: [pre-commit]
+        stages: [pre-push]
         files: ^server/.*\.py$
-
-  - repo: local
-    hooks:
-      - id: lint-staged
-        name: lint-staged (client)
-        entry: bash -c 'cd client && pnpm exec lint-staged'
-        language: system
-        pass_filenames: false
-        always_run: false
-        stages: [pre-commit]

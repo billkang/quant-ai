@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { dashboardApi, stockApi } from '../services/api'
+import { wsClient } from '../services/websocket'
 import {
   Card,
   Table,
@@ -77,6 +78,35 @@ export default function Dashboard() {
   useEffect(() => {
     fetchWatchlist()
     fetchDashboard()
+
+    wsClient.connect()
+    const unsub = wsClient.onMessage((data: unknown) => {
+      const msg = data as {
+        type: string
+        data: Record<string, { price: number; change: number; changePercent: number }>
+      }
+      if (msg.type === 'quote' && msg.data) {
+        setStocks(prev =>
+          prev.map(s => {
+            const update = msg.data[s.code]
+            if (update) {
+              return {
+                ...s,
+                price: update.price,
+                change: update.change,
+                changePercent: update.changePercent,
+              }
+            }
+            return s
+          })
+        )
+      }
+    })
+
+    return () => {
+      unsub()
+      wsClient.disconnect()
+    }
   }, [])
 
   const fetchDashboard = async () => {
@@ -97,7 +127,11 @@ export default function Dashboard() {
     try {
       setLoading(true)
       const res = await stockApi.getWatchlist()
-      setStocks(res.data || [])
+      const list = res.data || []
+      setStocks(list)
+      if (list.length > 0) {
+        wsClient.subscribe(list.map(s => s.code))
+      }
     } catch (error) {
       console.error('Failed to fetch watchlist:', error)
     } finally {

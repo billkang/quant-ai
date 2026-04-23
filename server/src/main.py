@@ -12,12 +12,16 @@ from src.api import (
     events,
     factor_snapshots,
     news,
+    notifications,
+    paper,
     portfolio,
     quant,
+    research,
     screener,
     seed,
     stocks,
     strategies,
+    ws,
 )
 from src.core.config import settings
 from src.core.docs_auth import DocsAuthMiddleware
@@ -88,6 +92,10 @@ app.include_router(events.router, prefix="/api")
 app.include_router(strategies.router, prefix="/api")
 app.include_router(factor_snapshots.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
+app.include_router(paper.router, prefix="/api")
+app.include_router(research.router, prefix="/api")
+app.include_router(notifications.router, prefix="/api")
+app.include_router(ws.router)
 
 
 @app.get("/api/health")

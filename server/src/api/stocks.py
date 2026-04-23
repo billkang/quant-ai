@@ -1,6 +1,7 @@
 from typing import cast
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.api.auth import get_current_user
@@ -11,6 +12,10 @@ from src.models.models import User
 from src.services.stock_data import stock_service
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
+
+
+class AddWatchlistRequest(BaseModel):
+    stock_code: str
 
 
 @router.get("/watchlist")
@@ -31,10 +36,11 @@ async def get_watchlist(
 
 @router.post("/watchlist")
 async def add_to_watchlist(
-    stock_code: str,
+    req: AddWatchlistRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    stock_code = req.stock_code
     existing = (
         db.query(crud.models.Watchlist)
         .filter(

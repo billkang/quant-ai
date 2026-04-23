@@ -6,7 +6,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from ..models import crud
 from ..models.database import SessionLocal
-from ..models.models import EventSource
+from ..models.models import EventSource, Notification, NotificationSetting
 from .event_fetchers import run_fetcher
 from .event_pipeline_service import EventPipelineService
 from .fundamental_service import fundamental_service
@@ -70,6 +70,13 @@ class SchedulerService:
             CronTrigger(hour="*/6", minute=0),
             id="interval_news_fetch",
             name="定时新闻采集",
+            replace_existing=True,
+        )
+        self.scheduler.add_job(
+            self.research_fetch,
+            CronTrigger(hour=15, minute=35),
+            id="research_fetch",
+            name="每日研报公告抓取",
             replace_existing=True,
         )
         self.scheduler.start()
@@ -197,6 +204,29 @@ class SchedulerService:
 
         logger.info(f"Updated {stock_code}: {len(indicators)} days of indicators")
 
+        # Push real-time quote update via WebSocket
+        try:
+            from src.api.ws import manager as ws_manager
+
+            ws_manager.broadcast_sync(
+                stock_code,
+                {
+                    "type": "quote",
+                    "data": {
+                        stock_code: {
+                            "code": stock_code,
+                            "name": stock_code,
+                            "price": quote.get("price", 0),
+                            "change": quote.get("change", 0),
+                            "changePercent": quote.get("changePercent", 0),
+                            "volume": quote.get("volume", 0),
+                        }
+                    },
+                },
+            )
+        except Exception as e:
+            logger.warning(f"WebSocket broadcast failed for {stock_code}: {e}")
+
     def night_data_update(self):
         logger.info("Running night news update job")
         db = SessionLocal()
@@ -240,26 +270,25 @@ class SchedulerService:
             return
 
         today = datetime.now().date()
+        alerts_to_create = []
 
         # RSI oversold/overbought
         if indicator.rsi6 is not None:
             if indicator.rsi6 < 20:
-                crud.save_alert(
-                    db,
-                    stock_code,
-                    "indicator_signal",
-                    f"RSI6={indicator.rsi6:.2f}",
-                    f"{stock_code} RSI6 严重超卖 ({indicator.rsi6:.2f})，可能存在反弹机会",
-                    triggered_at=today,
+                alerts_to_create.append(
+                    (
+                        "indicator_signal",
+                        f"RSI6={indicator.rsi6:.2f}",
+                        f"{stock_code} RSI6 严重超卖 ({indicator.rsi6:.2f})，可能存在反弹机会",
+                    )
                 )
             elif indicator.rsi6 > 80:
-                crud.save_alert(
-                    db,
-                    stock_code,
-                    "indicator_signal",
-                    f"RSI6={indicator.rsi6:.2f}",
-                    f"{stock_code} RSI6 严重超买 ({indicator.rsi6:.2f})，注意回调风险",
-                    triggered_at=today,
+                alerts_to_create.append(
+                    (
+                        "indicator_signal",
+                        f"RSI6={indicator.rsi6:.2f}",
+                        f"{stock_code} RSI6 严重超买 ({indicator.rsi6:.2f})，注意回调风险",
+                    )
                 )
 
         # MACD golden/dead cross
@@ -270,22 +299,20 @@ class SchedulerService:
                 prev_dea = prev[1].macd_dea
                 if prev_dif is not None and prev_dea is not None:
                     if prev_dif <= prev_dea and indicator.macd_dif > indicator.macd_dea:
-                        crud.save_alert(
-                            db,
-                            stock_code,
-                            "indicator_signal",
-                            "MACD金叉",
-                            f"{stock_code} MACD 金叉信号：DIF ({indicator.macd_dif:.3f}) 上穿 DEA ({indicator.macd_dea:.3f})",
-                            triggered_at=today,
+                        alerts_to_create.append(
+                            (
+                                "indicator_signal",
+                                "MACD金叉",
+                                f"{stock_code} MACD 金叉信号：DIF ({indicator.macd_dif:.3f}) 上穿 DEA ({indicator.macd_dea:.3f})",
+                            )
                         )
                     elif prev_dif >= prev_dea and indicator.macd_dif < indicator.macd_dea:
-                        crud.save_alert(
-                            db,
-                            stock_code,
-                            "indicator_signal",
-                            "MACD死叉",
-                            f"{stock_code} MACD 死叉信号：DIF ({indicator.macd_dif:.3f}) 下穿 DEA ({indicator.macd_dea:.3f})",
-                            triggered_at=today,
+                        alerts_to_create.append(
+                            (
+                                "indicator_signal",
+                                "MACD死叉",
+                                f"{stock_code} MACD 死叉信号：DIF ({indicator.macd_dif:.3f}) 下穿 DEA ({indicator.macd_dea:.3f})",
+                            )
                         )
 
         # Bollinger band breakout
@@ -293,23 +320,91 @@ class SchedulerService:
         if latest_price and indicator.boll_upper is not None and indicator.boll_lower is not None:
             price = latest_price[0].close
             if price > indicator.boll_upper:
-                crud.save_alert(
-                    db,
-                    stock_code,
-                    "price_break",
-                    f"price={price:.2f} > boll_upper={indicator.boll_upper:.2f}",
-                    f"{stock_code} 股价突破布林带上轨 ({price:.2f} > {indicator.boll_upper:.2f})",
-                    triggered_at=today,
+                alerts_to_create.append(
+                    (
+                        "price_break",
+                        f"price={price:.2f} > boll_upper={indicator.boll_upper:.2f}",
+                        f"{stock_code} 股价突破布林带上轨 ({price:.2f} > {indicator.boll_upper:.2f})",
+                    )
                 )
             elif price < indicator.boll_lower:
-                crud.save_alert(
-                    db,
-                    stock_code,
-                    "price_break",
-                    f"price={price:.2f} < boll_lower={indicator.boll_lower:.2f}",
-                    f"{stock_code} 股价跌破布林带下轨 ({price:.2f} < {indicator.boll_lower:.2f})",
-                    triggered_at=today,
+                alerts_to_create.append(
+                    (
+                        "price_break",
+                        f"price={price:.2f} < boll_lower={indicator.boll_lower:.2f}",
+                        f"{stock_code} 股价跌破布林带下轨 ({price:.2f} < {indicator.boll_lower:.2f})",
+                    )
                 )
+
+        for alert_type, condition, message in alerts_to_create:
+            crud.save_alert(
+                db,
+                stock_code,
+                alert_type,
+                condition,
+                message,
+                triggered_at=today,
+            )
+            self._create_notification(db, stock_code, alert_type, message)
+
+    def _create_notification(self, db, stock_code: str, alert_type: str, message: str):
+        """Create in-app notification for alert."""
+        try:
+            # Find users who have this stock in watchlist and enabled in_app notifications
+            from ..models.models import Watchlist
+
+            watchlist_entries = db.query(Watchlist).filter(Watchlist.stock_code == stock_code).all()
+            user_ids = {entry.user_id for entry in watchlist_entries if entry.user_id}
+
+            if not user_ids:
+                # Fallback: create a global notification (user_id=None)
+                user_ids = {None}
+
+            for user_id in user_ids:
+                # Check notification settings
+                settings = (
+                    db.query(NotificationSetting)
+                    .filter(NotificationSetting.user_id == user_id)
+                    .first()
+                )
+                if settings and settings.channel_config:
+                    channels = settings.channel_config.get(alert_type, ["in_app"])
+                else:
+                    channels = ["in_app"]
+
+                if "in_app" not in channels:
+                    continue
+
+                # Deduplication: skip if same alert_type for same stock within 5 minutes
+                from datetime import timedelta
+
+                five_min_ago = datetime.utcnow() - timedelta(minutes=5)
+                existing = (
+                    db.query(Notification)
+                    .filter(
+                        Notification.user_id == user_id,
+                        Notification.type == alert_type,
+                        Notification.title.contains(stock_code),
+                        Notification.created_at >= five_min_ago,
+                    )
+                    .first()
+                )
+                if existing:
+                    continue
+
+                notification = Notification(
+                    user_id=user_id,
+                    type=alert_type,
+                    title=f"{stock_code} 告警",
+                    content=message,
+                    channels=channels,
+                    is_read=0,
+                )
+                db.add(notification)
+            db.commit()
+        except Exception as e:
+            logger.error(f"Failed to create notification for {stock_code}: {e}")
+            db.rollback()
 
     def fundamentals_update(self):
         logger.info("Running fundamentals update job")
@@ -371,6 +466,34 @@ class SchedulerService:
             logger.error(f"Daily event factor aggregation failed: {e}")
         finally:
             db.close()
+
+    def research_fetch(self):
+        """Fetch research reports and stock notices for watchlist stocks."""
+        logger.info("Running research fetch job")
+        db = SessionLocal()
+        try:
+            watchlist = crud.get_watchlist(db)
+            for item in watchlist:
+                try:
+                    self._fetch_research_for_stock(db, item.stock_code)
+                    self._fetch_notices_for_stock(db, item.stock_code)
+                except Exception as e:
+                    logger.error(f"Failed to fetch research for {item.stock_code}: {e}")
+            logger.info("Research fetch completed")
+        except Exception as e:
+            logger.error(f"Research fetch failed: {e}")
+        finally:
+            db.close()
+
+    def _fetch_research_for_stock(self, db, stock_code: str):
+        """Placeholder for research report fetching via AkShare."""
+        # TODO: Integrate akshare stock_research_report_em() when stable
+        logger.info(f"Research report fetch placeholder for {stock_code}")
+
+    def _fetch_notices_for_stock(self, db, stock_code: str):
+        """Placeholder for stock notice fetching via AkShare."""
+        # TODO: Integrate akshare stock_notice_report() when stable
+        logger.info(f"Stock notice fetch placeholder for {stock_code}")
 
 
 scheduler_service = SchedulerService()

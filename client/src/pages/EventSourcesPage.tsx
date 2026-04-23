@@ -18,7 +18,7 @@ import { ApiOutlined, ThunderboltOutlined, PlusOutlined, DeleteOutlined } from '
 import { eventApi } from '../services/api'
 import type { EventSource } from '../types/api'
 
-const { Text } = Typography
+const { Title, Text } = Typography
 
 export default function EventSourcesPage() {
   const [sources, setSources] = useState<EventSource[]>([])
@@ -160,10 +160,12 @@ export default function EventSourcesPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
-        <h2 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>数据源配置</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: '4px 0 0' }}>
+        <Title level={3} style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>
+          数据源配置
+        </Title>
+        <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
           管理事件数据采集源与调度策略
-        </p>
+        </Text>
       </div>
 
       <Card

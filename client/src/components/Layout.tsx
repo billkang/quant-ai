@@ -21,8 +21,9 @@ import {
   ScheduleOutlined,
   SafetyCertificateOutlined,
   ExperimentOutlined,
+  CreditCardOutlined,
 } from '@ant-design/icons'
-import api, { quantApi } from '../services/api'
+import api, { notificationApi } from '../services/api'
 import { useTheme } from '../hooks/useTheme'
 import type { ThemeKey } from '../styles/themes'
 
@@ -33,6 +34,7 @@ const navItems = [
   { key: '/strategy-library', label: '策略库', icon: BookOutlined },
   { key: '/backtest', label: '回测报告', icon: BarChartOutlined },
   { key: '/portfolio', label: '资产组合', icon: FundOutlined },
+  { key: '/paper-trading', label: '虚拟盘', icon: CreditCardOutlined },
   { key: '/events', label: '事件查询', icon: AlertOutlined },
   { key: '/event-sources', label: '数据源配置', icon: ApiOutlined },
   { key: '/event-jobs', label: '采集任务', icon: ScheduleOutlined },
@@ -125,9 +127,9 @@ export default function Layout() {
   useEffect(() => {
     const fetchUnread = async () => {
       try {
-        const res = await quantApi.getAlerts(false, 1)
+        const res = await notificationApi.getHistory(1, false)
         const count = res.data?.data?.length || 0
-        setUnreadCount(count > 0 ? count : 3)
+        setUnreadCount(count)
       } catch (e) {
         console.error(e)
       }

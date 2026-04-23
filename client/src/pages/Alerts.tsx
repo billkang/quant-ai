@@ -196,7 +196,7 @@ export default function Alerts() {
         title={
           <Space>
             <AlertOutlined style={{ color: 'var(--accent)' }} />
-            <span style={{ fontWeight: 600 }}>告警列表</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>告警列表</span>
           </Space>
         }
         extra={

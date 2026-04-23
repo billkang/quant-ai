@@ -30,6 +30,13 @@ import type {
   EventRule,
   StrategyItem,
   StrategyVersion,
+  PaperAccountData,
+  PaperPositionItem,
+  PaperOrderItem,
+  ResearchReportItem,
+  StockNoticeItem,
+  NotificationSettingData,
+  NotificationItem,
 } from '../types/api'
 
 const api = axios.create({
@@ -82,9 +89,9 @@ api.interceptors.response.use(
 export const stockApi = {
   getWatchlist: () => api.get<Stock[]>('/stocks/watchlist'),
   addStock: (code: string) =>
-    api.post<ApiResponse<{ stock_code: string; name: string }>>(
-      `/stocks/watchlist?stock_code=${code}`
-    ),
+    api.post<ApiResponse<{ stock_code: string; name: string }>>('/stocks/watchlist', {
+      stock_code: code,
+    }),
   removeStock: (code: string) => api.delete<ApiResponse>(`/stocks/watchlist/${code}`),
   getStock: (code: string) => api.get<Stock>(`/stocks/${code}`),
   getKline: (code: string, period?: string) =>
@@ -111,7 +118,7 @@ export const aiApi = {
 }
 
 export const portfolioApi = {
-  getPortfolio: () => api.get<PortfolioData>('/portfolio'),
+  getPortfolio: () => api.get<ApiResponse<PortfolioData>>('/portfolio'),
   addPosition: (data: AddPositionRequest) => api.post<ApiResponse>('/portfolio', data),
   deletePosition: (code: string) => api.delete<ApiResponse>(`/portfolio/${code}`),
   getTransactions: (limit = 50) =>
@@ -187,6 +194,43 @@ export const strategyApi = {
 export const systemApi = {
   health: () => api.get<ApiResponse<HealthCheck>>('/health'),
   externalHealth: () => api.get<ApiResponse<HealthCheck>>('/health/external'),
+}
+
+export const paperApi = {
+  getAccount: () => api.get<ApiResponse<PaperAccountData>>('/paper/account'),
+  getPositions: () => api.get<ApiResponse<PaperPositionItem[]>>('/paper/positions'),
+  createOrder: (data: {
+    stock_code: string
+    stock_name: string
+    side: string
+    quantity: number
+    order_type?: string
+  }) => api.post<ApiResponse<PaperOrderItem>>('/paper/orders', data),
+  getOrders: (limit = 50) => api.get<ApiResponse<PaperOrderItem[]>>(`/paper/orders?limit=${limit}`),
+  resetAccount: () => api.post<ApiResponse>('/paper/reset'),
+}
+
+export const researchApi = {
+  getReports: (symbol: string, limit = 20) =>
+    api.get<ApiResponse<ResearchReportItem[]>>(`/research/reports?symbol=${symbol}&limit=${limit}`),
+  getNotices: (symbol: string, category = 'all', limit = 20) =>
+    api.get<ApiResponse<StockNoticeItem[]>>(
+      `/research/notices?symbol=${symbol}&category=${category}&limit=${limit}`
+    ),
+  fetchData: (symbol: string, type: string) =>
+    api.post<ApiResponse>('/research/fetch', { symbol, type }),
+}
+
+export const notificationApi = {
+  getSettings: () => api.get<ApiResponse<NotificationSettingData>>('/notifications/settings'),
+  updateSettings: (data: Partial<NotificationSettingData>) =>
+    api.put<ApiResponse>('/notifications/settings', data),
+  getHistory: (limit = 50, isRead?: boolean) =>
+    api.get<ApiResponse<NotificationItem[]>>(
+      `/notifications/history?limit=${limit}${isRead !== undefined ? `&is_read=${isRead}` : ''}`
+    ),
+  markRead: (id: number) => api.put<ApiResponse>(`/notifications/${id}/read`),
+  testChannel: (channel: string) => api.post<ApiResponse>('/notifications/test', { channel }),
 }
 
 export default api

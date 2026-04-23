@@ -4,7 +4,7 @@ import { ScheduleOutlined } from '@ant-design/icons'
 import { eventApi } from '../services/api'
 import type { EventJob } from '../types/api'
 
-const { Text } = Typography
+const { Title, Text } = Typography
 
 export default function EventJobsPage() {
   const [jobs, setJobs] = useState<EventJob[]>([])
@@ -108,10 +108,12 @@ export default function EventJobsPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
-        <h2 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>采集任务日志</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: '4px 0 0' }}>
+        <Title level={3} style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>
+          采集任务日志
+        </Title>
+        <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
           查看事件数据采集任务的执行历史和状态
-        </p>
+        </Text>
       </div>
 
       <Card

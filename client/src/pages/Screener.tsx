@@ -11,10 +11,18 @@ import {
   Modal,
   Input,
 } from 'antd'
-import { SearchOutlined, PlusOutlined, SaveOutlined, DeleteOutlined } from '@ant-design/icons'
+import {
+  SearchOutlined,
+  PlusOutlined,
+  SaveOutlined,
+  DeleteOutlined,
+  FilterOutlined,
+  UnorderedListOutlined,
+  FileTextOutlined,
+} from '@ant-design/icons'
 import api from '../services/api'
 
-const { Title } = Typography
+const { Title, Text } = Typography
 
 interface Condition {
   field: string
@@ -176,11 +184,23 @@ export default function Screener() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <Title level={3} style={{ margin: 0, color: 'var(--text-primary)' }}>
-        智能选股
-      </Title>
+      <div>
+        <Title level={3} style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>
+          智能选股
+        </Title>
+        <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>多条件筛选与模板管理</Text>
+      </div>
 
-      <Card title="筛选条件" bodyStyle={{ padding: 20 }} data-testid="screener-filters">
+      <Card
+        title={
+          <Space>
+            <FilterOutlined style={{ color: 'var(--accent)' }} />
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>筛选条件</span>
+          </Space>
+        }
+        bodyStyle={{ padding: 20 }}
+        data-testid="screener-filters"
+      >
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           {conditions.map((cond, idx) => (
             <Space key={idx} size="middle">
@@ -229,7 +249,15 @@ export default function Screener() {
       </Card>
 
       {templates.length > 0 && (
-        <Card title="我的模板" size="small">
+        <Card
+          title={
+            <Space>
+              <FileTextOutlined style={{ color: 'var(--accent)' }} />
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>我的模板</span>
+            </Space>
+          }
+          size="small"
+        >
           <Space wrap>
             {templates.map(t => (
               <Button key={t.id} size="small" onClick={() => loadTemplate(t)}>
@@ -247,7 +275,17 @@ export default function Screener() {
         </Card>
       )}
 
-      <Card title={`筛选结果 (${results.length})`} data-testid="screener-results">
+      <Card
+        title={
+          <Space>
+            <UnorderedListOutlined style={{ color: 'var(--accent)' }} />
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+              筛选结果 ({results.length})
+            </span>
+          </Space>
+        }
+        data-testid="screener-results"
+      >
         <Table
           dataSource={results}
           columns={columns}

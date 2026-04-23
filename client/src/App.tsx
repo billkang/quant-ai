@@ -19,6 +19,7 @@ import EventsPage from './pages/EventsPage'
 import EventSourcesPage from './pages/EventSourcesPage'
 import EventJobsPage from './pages/EventJobsPage'
 import EventRulesPage from './pages/EventRulesPage'
+import PaperTrading from './pages/PaperTrading'
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
             <Route path="event-sources" element={<EventSourcesPage />} />
             <Route path="event-jobs" element={<EventJobsPage />} />
             <Route path="event-rules" element={<EventRulesPage />} />
+            <Route path="paper-trading" element={<PaperTrading />} />
           </Route>
         </Routes>
       </BrowserRouter>
