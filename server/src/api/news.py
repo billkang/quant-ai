@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from src import models
 from src.api.common import success_response
 from src.api.deps import get_db
 from src.models import crud
@@ -11,8 +12,46 @@ router = APIRouter(prefix="/news", tags=["news"])
 
 
 @router.get("")
-async def get_news(category: str = "all", symbol: str | None = None):
-    if symbol:
+async def get_news(category: str = "all", symbol: str | None = None, db: Session = Depends(get_db)):
+    if category == "notices" and symbol:
+        notices = (
+            db.query(models.StockNotice)
+            .filter(models.StockNotice.symbol == symbol)
+            .order_by(models.StockNotice.publish_date.desc())
+            .limit(20)
+            .all()
+        )
+        return [
+            {
+                "id": str(n.id),
+                "title": n.title,
+                "summary": n.category or "",
+                "source": n.source or "",
+                "time": n.publish_date.strftime("%Y-%m-%d %H:%M:%S") if n.publish_date else "",
+                "url": n.url,
+            }
+            for n in notices
+        ]
+    elif category == "macro":
+        events = (
+            db.query(models.Event)
+            .filter(models.Event.scope == "market")
+            .order_by(models.Event.created_at.desc())
+            .limit(20)
+            .all()
+        )
+        return [
+            {
+                "id": str(e.id),
+                "title": e.title,
+                "summary": e.summary or "",
+                "source": "宏观事件",
+                "time": e.created_at.strftime("%Y-%m-%d %H:%M:%S") if e.created_at else "",
+                "url": e.url,
+            }
+            for e in events
+        ]
+    elif symbol:
         return news_service.get_stock_news_from_db(symbol)
     else:
         return []

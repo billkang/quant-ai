@@ -62,11 +62,18 @@ class StockDataService:
             print(f"Error fetching A stock quote: {e}")
             return None
 
-    def get_hk_stock_quote(self, symbol: str) -> dict | None:
+    def _get_yahoo_quote(self, symbol: str) -> dict | None:
+        """Internal helper for fetching quotes from Yahoo Finance."""
         try:
             code = symbol.replace(".HK", "").replace(".US", "")
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-            yahoo_symbol = f"{code}.HK" if ".HK" in symbol.upper() else f"{code}"
+            yahoo_symbol = (
+                f"{code}.HK"
+                if ".HK" in symbol.upper()
+                else f"{code}.US"
+                if ".US" in symbol.upper()
+                else code
+            )
             resp = requests.get(
                 f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}",
                 headers=headers,
@@ -95,6 +102,12 @@ class StockDataService:
         except Exception as e:
             print(f"Error fetching {symbol} quote: {e}")
             return None
+
+    def get_hk_stock_quote(self, symbol: str) -> dict | None:
+        return self._get_yahoo_quote(symbol)
+
+    def get_us_stock_quote(self, symbol: str) -> dict | None:
+        return self._get_yahoo_quote(symbol)
 
     def get_a_stock_kline(self, symbol: str, period: str = "daily") -> list:
         try:

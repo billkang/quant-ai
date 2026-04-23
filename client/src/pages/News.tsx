@@ -119,11 +119,11 @@ export default function News() {
     await fetchSources()
   }
 
-  const fetchNews = async (stockCode: string) => {
+  const fetchNews = async (stockCode: string, category = 'stock') => {
     if (!stockCode) return
     setNewsLoading(true)
     try {
-      const res = await api.get('/news', { params: { symbol: stockCode } })
+      const res = await api.get('/news', { params: { symbol: stockCode, category } })
       const data = res.data
       setNews(data)
     } catch (error) {
@@ -137,7 +137,26 @@ export default function News() {
   const handleStockChange = (code: string) => {
     setSelectedStock(code)
     setNews([])
-    if (code) fetchNews(code)
+    if (code) {
+      const categoryMap: Record<string, string> = {
+        news: 'stock',
+        notices: 'notices',
+        macro: 'macro',
+      }
+      fetchNews(code, categoryMap[tabKey] || 'stock')
+    }
+  }
+
+  const handleTabChange = (key: string) => {
+    setTabKey(key)
+    if (selectedStock) {
+      const categoryMap: Record<string, string> = {
+        news: 'stock',
+        notices: 'notices',
+        macro: 'macro',
+      }
+      fetchNews(selectedStock, categoryMap[key] || 'stock')
+    }
   }
 
   const tabItems = [
@@ -238,11 +257,72 @@ export default function News() {
         </span>
       ),
       children: (
-        <Empty
-          description="请选择股票查看公告"
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          style={{ padding: 60 }}
-        />
+        <div>
+          {newsLoading ? (
+            <div style={{ textAlign: 'center', padding: 60 }}>
+              <Spin />
+            </div>
+          ) : news.length === 0 ? (
+            <Empty
+              description="暂无公告，请先选择股票"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              style={{ padding: 60 }}
+            />
+          ) : (
+            <Space direction="vertical" style={{ width: '100%' }} size="small">
+              {news.map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    padding: '16px 20px',
+                    background: 'var(--bg-elevated)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid transparent',
+                    transition: 'all 0.2s',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = 'var(--border-hover)'
+                    e.currentTarget.style.background = 'var(--bg-hover)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'transparent'
+                    e.currentTarget.style.background = 'var(--bg-elevated)'
+                  }}
+                >
+                  <Text
+                    strong
+                    style={{
+                      fontSize: 15,
+                      color: 'var(--text-primary)',
+                      display: 'block',
+                      marginBottom: 6,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {item.title}
+                  </Text>
+                  <Space size={12}>
+                    <Tag
+                      style={{
+                        background: 'var(--accent-soft)',
+                        color: 'var(--accent)',
+                        border: 'none',
+                        fontSize: 11,
+                      }}
+                    >
+                      {item.source}
+                    </Tag>
+                    <Text style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      <ClockCircleOutlined style={{ marginRight: 4 }} />
+                      {item.time}
+                    </Text>
+                  </Space>
+                </div>
+              ))}
+            </Space>
+          )}
+        </div>
       ),
     },
     {
@@ -254,11 +334,83 @@ export default function News() {
         </span>
       ),
       children: (
-        <Empty
-          description="宏观资讯功能开发中"
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          style={{ padding: 60 }}
-        />
+        <div>
+          {newsLoading ? (
+            <div style={{ textAlign: 'center', padding: 60 }}>
+              <Spin />
+            </div>
+          ) : news.length === 0 ? (
+            <Empty
+              description="暂无宏观资讯"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              style={{ padding: 60 }}
+            />
+          ) : (
+            <Space direction="vertical" style={{ width: '100%' }} size="small">
+              {news.map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    padding: '16px 20px',
+                    background: 'var(--bg-elevated)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid transparent',
+                    transition: 'all 0.2s',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = 'var(--border-hover)'
+                    e.currentTarget.style.background = 'var(--bg-hover)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'transparent'
+                    e.currentTarget.style.background = 'var(--bg-elevated)'
+                  }}
+                >
+                  <Text
+                    strong
+                    style={{
+                      fontSize: 15,
+                      color: 'var(--text-primary)',
+                      display: 'block',
+                      marginBottom: 6,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {item.title}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: 'var(--text-secondary)',
+                      display: 'block',
+                      marginBottom: 8,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {item.summary}
+                  </Text>
+                  <Space size={12}>
+                    <Tag
+                      style={{
+                        background: 'var(--accent-soft)',
+                        color: 'var(--accent)',
+                        border: 'none',
+                        fontSize: 11,
+                      }}
+                    >
+                      {item.source}
+                    </Tag>
+                    <Text style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      <ClockCircleOutlined style={{ marginRight: 4 }} />
+                      {item.time}
+                    </Text>
+                  </Space>
+                </div>
+              ))}
+            </Space>
+          )}
+        </div>
       ),
     },
   ]
@@ -309,7 +461,7 @@ export default function News() {
         </Space>
       </Card>
 
-      <Tabs activeKey={tabKey} onChange={setTabKey} items={tabItems} />
+      <Tabs activeKey={tabKey} onChange={handleTabChange} items={tabItems} />
     </div>
   )
 }

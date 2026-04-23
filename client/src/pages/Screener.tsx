@@ -72,6 +72,10 @@ export default function Screener() {
     { id: number; name: string; conditions: Condition[] }[]
   >([])
 
+  useEffect(() => {
+    fetchTemplates()
+  }, [])
+
   const fetchTemplates = async () => {
     try {
       const res = await api.get('/screener/templates')
@@ -155,7 +159,7 @@ export default function Screener() {
 
   const addToWatchlist = async (code: string) => {
     try {
-      await api.post(`/stocks/watchlist?stock_code=${code}`)
+      await api.post('/stocks/watchlist', { stock_code: code })
       message.success('已添加到自选股')
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } } }

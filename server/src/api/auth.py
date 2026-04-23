@@ -59,8 +59,10 @@ class PasswordChangeRequest(BaseModel):
 
 
 def get_current_user(
-    token: str = Header(..., alias="Authorization"), db: Session = Depends(get_db)
+    token: str | None = Header(None, alias="Authorization"), db: Session = Depends(get_db)
 ) -> User:
+    if not token:
+        raise HTTPException(status_code=401, detail="缺少认证信息")
     if token.startswith("Bearer "):
         token = token[7:]
     payload = _decode_token(token)
