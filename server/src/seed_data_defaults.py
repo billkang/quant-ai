@@ -1,4 +1,4 @@
-"""Seed default event sources, rules, jobs and events for mvp-event-factor-core."""
+"""Seed default data sources, channels, rules, jobs and events."""
 
 from datetime import datetime, timedelta
 from typing import Any
@@ -6,125 +6,202 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from src.models.database import SessionLocal
-from src.models.models import Event, EventJob, EventRule, EventSource
+from src.models.models import DataChannel, Event, EventJob, EventRule, EventSource
 
-DEFAULT_EVENT_SOURCES = [
+# ───────────────────────────────────────────────
+#  Data Sources (parent containers)
+# ───────────────────────────────────────────────
+
+DEFAULT_DATA_SOURCES = [
     {
-        "name": "东方财富个股新闻",
-        "source_type": "stock_news",
+        "name": "A股个股信息",
+        "source_type": "stock_info",
         "scope": "individual",
-        "config": {
-            "source": "eastmoney",
-            "api": "stock_news_em",
-            "stock_pool": "watchlist+backtest",
-            "max_pages": 3,
-        },
+        "config": {},
         "schedule": "0 */6 * * *",
         "enabled": 1,
-        "is_builtin": 0,
+        "is_builtin": 1,
         "category": "stock_info",
     },
     {
-        "name": "东方财富个股公告",
-        "source_type": "stock_notice",
+        "name": "港股信息",
+        "source_type": "hk_stock_info",
         "scope": "individual",
-        "config": {
-            "source": "eastmoney",
-            "api": "stock_zh_a_alerts",
-            "stock_pool": "watchlist+backtest",
-            "max_pages": 2,
-        },
-        "schedule": "0 */12 * * *",
+        "config": {},
+        "schedule": "0 */8 * * *",
         "enabled": 1,
-        "is_builtin": 0,
+        "is_builtin": 1,
         "category": "stock_info",
     },
     {
-        "name": "A股宏观数据",
-        "source_type": "macro_data",
+        "name": "国际新闻",
+        "source_type": "international_news",
         "scope": "market",
-        "config": {
-            "source": "akshare",
-            "indicators": ["cpi", "ppi", "pmi", "m2", "gdp"],
-        },
-        "schedule": "0 9 * * *",
+        "config": {},
+        "schedule": "0 */4 * * *",
         "enabled": 1,
-        "is_builtin": 0,
+        "is_builtin": 1,
         "category": "global_event",
     },
     {
-        "name": "港股新闻数据源",
-        "source_type": "stock_news",
-        "scope": "individual",
+        "name": "财经资讯",
+        "source_type": "financial_news",
+        "scope": "market",
+        "config": {},
+        "schedule": "0 */3 * * *",
+        "enabled": 1,
+        "is_builtin": 1,
+        "category": "global_event",
+    },
+    {
+        "name": "板块数据",
+        "source_type": "sector_data",
+        "scope": "sector",
+        "config": {},
+        "schedule": "0 17 * * 1-5",
+        "enabled": 1,
+        "is_builtin": 1,
+        "category": "stock_info",
+    },
+    {
+        "name": "宏观数据",
+        "source_type": "macro_data",
+        "scope": "market",
+        "config": {},
+        "schedule": "0 9 * * *",
+        "enabled": 1,
+        "is_builtin": 1,
+        "category": "global_event",
+    },
+]
+
+# ───────────────────────────────────────────────
+#  Data Channels (child endpoints)
+# ───────────────────────────────────────────────
+
+DEFAULT_CHANNELS = [
+    # A股个股信息
+    {
+        "name": "东方财富个股新闻",
+        "collection_method": "akshare",
+        "endpoint": "stock_news_em",
+        "config": {
+            "source": "eastmoney",
+            "stock_pool": "watchlist+backtest",
+            "max_pages": 3,
+        },
+        "data_source_name": "A股个股信息",
+    },
+    {
+        "name": "东方财富个股公告",
+        "collection_method": "akshare",
+        "endpoint": "stock_zh_a_alerts",
+        "config": {
+            "source": "eastmoney",
+            "stock_pool": "watchlist+backtest",
+            "max_pages": 2,
+        },
+        "data_source_name": "A股个股信息",
+    },
+    {
+        "name": "A股实时行情",
+        "collection_method": "akshare",
+        "endpoint": "stock_zh_a_spot",
+        "config": {
+            "source": "akshare",
+            "fields": ["open", "high", "low", "close", "volume", "amount"],
+            "stock_pool": "all_a_share",
+        },
+        "data_source_name": "A股个股信息",
+    },
+    {
+        "name": "个股财务数据",
+        "collection_method": "akshare",
+        "endpoint": "stock_financial_report_sina",
+        "config": {
+            "source": "akshare",
+            "fields": ["pe", "pb", "roe", "revenue", "profit", "debt_ratio"],
+            "stock_pool": "watchlist+backtest",
+        },
+        "data_source_name": "A股个股信息",
+    },
+    # 港股信息
+    {
+        "name": "港股新闻",
+        "collection_method": "api",
+        "endpoint": "https://query1.finance.yahoo.com/v8/finance/chart/",
         "config": {
             "source": "yahoo",
-            "api": "yahoo_finance_news",
             "stock_pool": "hk",
             "markets": ["HK"],
             "max_pages": 2,
         },
-        "schedule": "0 */8 * * *",
-        "enabled": 1,
-        "is_builtin": 0,
-        "category": "stock_info",
+        "data_source_name": "港股信息",
     },
     {
-        "name": "个股行情数据采集",
-        "source_type": "stock_price",
-        "scope": "individual",
-        "config": {
-            "source": "akshare",
-            "api": "stock_zh_a_spot",
-            "fields": ["open", "high", "low", "close", "volume", "amount"],
-            "stock_pool": "all_a_share",
-        },
-        "schedule": "0 16 * * 1-5",
-        "enabled": 1,
-        "is_builtin": 1,
-        "category": "stock_info",
-    },
-    {
-        "name": "个股财务数据采集",
-        "source_type": "stock_fundamental",
-        "scope": "individual",
-        "config": {
-            "source": "akshare",
-            "api": "stock_financial_report_sina",
-            "fields": ["pe", "pb", "roe", "revenue", "profit", "debt_ratio"],
-            "stock_pool": "watchlist+backtest",
-        },
-        "schedule": "0 3 1 * *",
-        "enabled": 1,
-        "is_builtin": 1,
-        "category": "stock_info",
-    },
-    {
-        "name": "板块轮动数据",
-        "source_type": "sector_data",
-        "scope": "sector",
-        "config": {
-            "source": "eastmoney",
-            "api": "sector_flow",
-            "fields": ["sector_name", "change_percent", "inflow", "main_force"],
-        },
-        "schedule": "0 17 * * 1-5",
-        "enabled": 1,
-        "is_builtin": 1,
-        "category": "global_event",
-    },
-    {
-        "name": "国际市场数据",
-        "source_type": "international",
-        "scope": "market",
+        "name": "港股行情",
+        "collection_method": "api",
+        "endpoint": "https://query1.finance.yahoo.com/v8/finance/chart/",
         "config": {
             "source": "yahoo",
-            "api": "world_indices",
-            "indices": ["^GSPC", "^IXIC", "^DJI", "^N225", "^FTSE", "^HSI"],
+            "indices": ["^HSI"],
         },
-        "schedule": "0 7 * * 1-5",
-        "enabled": 1,
-        "is_builtin": 0,
-        "category": "global_event",
+        "data_source_name": "港股信息",
+    },
+    # 国际新闻
+    {
+        "name": "国际市场指数",
+        "collection_method": "api",
+        "endpoint": "https://query1.finance.yahoo.com/v8/finance/chart/",
+        "config": {
+            "source": "yahoo",
+            "indices": ["^GSPC", "^IXIC", "^DJI", "^N225", "^FTSE"],
+        },
+        "data_source_name": "国际新闻",
+    },
+    # 财经资讯
+    {
+        "name": "新浪财经",
+        "collection_method": "rss",
+        "endpoint": "https://rss.sina.com.cn/roll/finance/hot_roll.xml",
+        "config": {
+            "source": "sina",
+            "max_items": 50,
+        },
+        "data_source_name": "财经资讯",
+    },
+    {
+        "name": "华尔街见闻",
+        "collection_method": "api",
+        "endpoint": "https://api.wallstreetcn.com/apiv1/content/articles",
+        "config": {
+            "source": "wallstreetcn",
+            "max_items": 30,
+        },
+        "data_source_name": "财经资讯",
+    },
+    # 板块数据
+    {
+        "name": "东方财富板块资金流",
+        "collection_method": "akshare",
+        "endpoint": "sector_flow",
+        "config": {
+            "source": "eastmoney",
+            "fields": ["sector_name", "change_percent", "inflow", "main_force"],
+            "filter_enabled_sectors": True,
+        },
+        "data_source_name": "板块数据",
+    },
+    # 宏观数据
+    {
+        "name": "中国宏观经济指标",
+        "collection_method": "akshare",
+        "endpoint": "macro_china_cpi",
+        "config": {
+            "source": "akshare",
+            "indicators": ["cpi", "ppi", "pmi", "m2", "gdp"],
+        },
+        "data_source_name": "宏观数据",
     },
 ]
 
@@ -152,7 +229,6 @@ DEFAULT_EVENT_RULES = [
                 "推荐",
                 "买入",
                 "看好",
-                "超预期",
                 "大幅增长",
                 "扭亏为盈",
                 "市场份额扩大",
@@ -181,7 +257,6 @@ DEFAULT_EVENT_RULES = [
                 "弱势",
                 "卖出",
                 "看空",
-                "不及预期",
                 "大幅下滑",
                 "由盈转亏",
                 "市场份额萎缩",
@@ -378,18 +453,42 @@ DEMO_EVENTS: list[dict[str, Any]] = [
 ]
 
 
-def seed_event_sources(db: Session) -> None:
-    for s in DEFAULT_EVENT_SOURCES:
+def seed_data_sources(db: Session) -> None:
+    for s in DEFAULT_DATA_SOURCES:
         existing = db.query(EventSource).filter(EventSource.name == s["name"]).first()
         if existing:
-            # Update existing sources with category and correct is_builtin
-            existing.is_builtin = s.get("is_builtin", 1)
+            existing.is_builtin = 1
             if s.get("category"):
                 existing.category = s["category"]
             db.commit()
             continue
         source = EventSource(**s)
         db.add(source)
+        db.commit()
+
+
+def seed_data_channels(db: Session) -> None:
+    """Seed default channels linked to data sources."""
+    # Build name -> id map for data sources
+    sources = db.query(EventSource).filter(EventSource.is_builtin == 1).all()
+    source_map = {s.name: s.id for s in sources}
+
+    for ch in DEFAULT_CHANNELS:
+        source_id = source_map.get(ch["data_source_name"])
+        if not source_id:
+            continue
+        existing = db.query(DataChannel).filter(DataChannel.name == ch["name"]).first()
+        if existing:
+            continue
+        channel = DataChannel(
+            data_source_id=source_id,
+            name=ch["name"],
+            collection_method=ch["collection_method"],
+            endpoint=ch.get("endpoint"),
+            config=ch.get("config", {}),
+            enabled=1,
+        )
+        db.add(channel)
         db.commit()
 
 
@@ -409,21 +508,21 @@ def seed_event_rules(db: Session) -> None:
 
 def seed_event_jobs(db: Session) -> None:
     """Seed demo event jobs so the jobs page shows data."""
-
-    # Only seed if table is empty
     count = db.query(EventJob).count()
     if count > 0:
         return
 
-    sources = db.query(EventSource).all()
-    if not sources:
+    channels = db.query(DataChannel).all()
+    if not channels:
         return
 
     now = datetime.utcnow()
     demo_jobs = [
         {
-            "source_id": sources[0].id if sources else 1,
+            "source_id": channels[0].data_source_id if channels else 1,
+            "channel_id": channels[0].id if channels else 1,
             "status": "success",
+            "trigger_type": "auto",
             "new_events_count": 12,
             "duplicate_count": 3,
             "error_count": 0,
@@ -432,8 +531,10 @@ def seed_event_jobs(db: Session) -> None:
             "completed_at": now - timedelta(hours=1, minutes=55),
         },
         {
-            "source_id": sources[1].id if len(sources) > 1 else 1,
+            "source_id": channels[0].data_source_id if channels else 1,
+            "channel_id": channels[0].id if channels else 1,
             "status": "success",
+            "trigger_type": "manual",
             "new_events_count": 5,
             "duplicate_count": 1,
             "error_count": 0,
@@ -442,8 +543,10 @@ def seed_event_jobs(db: Session) -> None:
             "completed_at": now - timedelta(hours=5, minutes=58),
         },
         {
-            "source_id": sources[2].id if len(sources) > 2 else 1,
+            "source_id": channels[min(1, len(channels) - 1)].data_source_id if channels else 1,
+            "channel_id": channels[min(1, len(channels) - 1)].id if channels else 1,
             "status": "failed",
+            "trigger_type": "auto",
             "new_events_count": 0,
             "duplicate_count": 0,
             "error_count": 1,
@@ -453,8 +556,10 @@ def seed_event_jobs(db: Session) -> None:
             "completed_at": now - timedelta(hours=11, minutes=50),
         },
         {
-            "source_id": sources[0].id if sources else 1,
+            "source_id": channels[min(2, len(channels) - 1)].data_source_id if channels else 1,
+            "channel_id": channels[min(2, len(channels) - 1)].id if channels else 1,
             "status": "running",
+            "trigger_type": "auto",
             "new_events_count": 0,
             "duplicate_count": 0,
             "error_count": 0,
@@ -498,50 +603,6 @@ def seed_demo_events(db: Session) -> None:
             created_at=now - timedelta(hours=i * 3),
         )
         db.add(event)
-        db.commit()
-
-
-def seed_data_channels(db: Session) -> None:
-    from src.models.models import DataChannel, EventSource
-
-    # Skip if channels already exist (seeded by seed_data_defaults.py)
-    if db.query(DataChannel).first():
-        return
-
-    # Create minimal fallback channels only if no sources exist either
-    sources = db.query(EventSource).filter(EventSource.is_builtin == 1).all()
-    if not sources:
-        return
-
-    defaults = [
-        {
-            "name": "AkShare",
-            "data_source_id": sources[0].id,
-            "collection_method": "akshare",
-            "timeout": 30,
-            "enabled": 1,
-        },
-        {
-            "name": "东方财富",
-            "data_source_id": sources[0].id,
-            "collection_method": "akshare",
-            "timeout": 30,
-            "enabled": 1,
-        },
-        {
-            "name": "Yahoo Finance",
-            "data_source_id": sources[0].id,
-            "collection_method": "api",
-            "timeout": 30,
-            "enabled": 1,
-        },
-    ]
-    for d in defaults:
-        existing = db.query(DataChannel).filter(DataChannel.name == d["name"]).first()
-        if existing:
-            continue
-        channel = DataChannel(**d)
-        db.add(channel)
         db.commit()
 
 
@@ -649,13 +710,13 @@ def seed_sectors(db: Session) -> None:
 def main():
     db = SessionLocal()
     try:
-        seed_event_sources(db)
+        seed_data_sources(db)
+        seed_data_channels(db)
         seed_event_rules(db)
         seed_event_jobs(db)
         seed_demo_events(db)
-        seed_data_channels(db)
         seed_sectors(db)
-        print("Default event data seeded successfully.")
+        print("Default data seeded successfully.")
     finally:
         db.close()
 

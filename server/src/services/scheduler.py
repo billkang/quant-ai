@@ -184,19 +184,53 @@ class SchedulerService:
         reporter = ProgressReporter(job_id, db)
         register_reporter(job_id, reporter)
         try:
+            from src.models.models import DataChannel, SourceChannelLink
+
             sources = db.query(EventSource).filter(EventSource.enabled == 1).all()
-            total = len(sources)
+
+            # Build execution list: for each source, determine channels to run
+            execution_items = []
+            for source in sources:
+                selected_ids = [
+                    r[0]
+                    for r in db.query(SourceChannelLink.channel_id)
+                    .filter(SourceChannelLink.source_id == source.id)
+                    .all()
+                ]
+                if selected_ids:
+                    channels = (
+                        db.query(DataChannel)
+                        .filter(
+                            DataChannel.id.in_(selected_ids),
+                            DataChannel.enabled == 1,
+                        )
+                        .all()
+                    )
+                else:
+                    channels = (
+                        db.query(DataChannel)
+                        .filter(
+                            DataChannel.data_source_id == source.id,
+                            DataChannel.enabled == 1,
+                        )
+                        .all()
+                    )
+                for ch in channels:
+                    execution_items.append((source, ch))
+
+            total = len(execution_items)
             crud.update_collection_job_progress(db, job_id, 0, total)
             reporter.report(0, total)
 
-            for idx, source in enumerate(sources):
+            for idx, (source, channel) in enumerate(execution_items):
                 if reporter.is_cancelled:
                     break
+                fetcher_type = _map_channel_to_fetcher(channel)
                 try:
-                    run_fetcher(db, source)
-                    logger.info(f"Fetched from source: {source.name}")
+                    run_fetcher(db, source, channel_id=channel.id, fetcher_type=fetcher_type)
+                    logger.info(f"Fetched from channel: {channel.name} (source: {source.name})")
                 except Exception as e:
-                    logger.error(f"Failed to fetch from {source.name}: {e}")
+                    logger.error(f"Failed to fetch from channel {channel.name}: {e}")
                 reporter.report(idx + 1, total)
 
             reporter.complete("completed")
@@ -616,6 +650,33 @@ class SchedulerService:
         """Placeholder for stock notice fetching via AkShare."""
         # TODO: Integrate akshare stock_notice_report() when stable
         logger.info(f"Stock notice fetch placeholder for {stock_code}")
+
+
+def _map_channel_to_fetcher(channel) -> str | None:
+    """Map a data channel to its fetcher type based on name / endpoint."""
+    name = channel.name
+    endpoint = channel.endpoint or ""
+    method = channel.collection_method
+
+    if "新闻" in name or "news" in endpoint.lower():
+        return "stock_news"
+    if "公告" in name or "alert" in endpoint.lower():
+        return "stock_notice"
+    if "行情" in name or "spot" in endpoint.lower() or "quote" in endpoint.lower():
+        return "stock_price"
+    if "财务" in name or "fundamental" in endpoint.lower():
+        return "stock_fundamental"
+    if "板块" in name or "sector" in endpoint.lower():
+        return "sector_data"
+    if "宏观" in name or "cpi" in endpoint.lower() or "macro" in endpoint.lower():
+        return "macro_data"
+    if "国际" in name or "港股" in name or "yahoo" in endpoint.lower():
+        return "international"
+    if method == "rss":
+        return "stock_news"
+    if method == "api":
+        return "international"
+    return None
 
 
 scheduler_service = SchedulerService()

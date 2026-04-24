@@ -512,8 +512,15 @@ def get_unread_alert_count(db: Session, user_id: int = None):
 # ---- Data Channels ----
 
 
-def get_data_channels(db: Session) -> list[models.DataChannel]:
-    return db.query(models.DataChannel).all()
+def get_data_channels(
+    db: Session, data_source_id: int = None, enabled: bool = None
+) -> list[models.DataChannel]:
+    query = db.query(models.DataChannel)
+    if data_source_id is not None:
+        query = query.filter(models.DataChannel.data_source_id == data_source_id)
+    if enabled is not None:
+        query = query.filter(models.DataChannel.enabled == (1 if enabled else 0))
+    return query.order_by(models.DataChannel.created_at.desc()).all()
 
 
 def get_data_channel_by_id(db: Session, channel_id: int) -> models.DataChannel | None:
@@ -547,6 +554,69 @@ def delete_data_channel(db: Session, channel_id: int) -> bool:
         db.commit()
         return True
     return False
+
+
+def get_data_channels_by_source(db: Session, data_source_id: int) -> list[models.DataChannel]:
+    return (
+        db.query(models.DataChannel)
+        .filter(models.DataChannel.data_source_id == data_source_id)
+        .order_by(models.DataChannel.created_at.desc())
+        .all()
+    )
+
+
+def get_selected_channels_by_source(db: Session, source_id: int) -> list[models.DataChannel]:
+    return (
+        db.query(models.DataChannel)
+        .join(
+            models.SourceChannelLink, models.SourceChannelLink.channel_id == models.DataChannel.id
+        )
+        .filter(models.SourceChannelLink.source_id == source_id)
+        .order_by(models.DataChannel.created_at.desc())
+        .all()
+    )
+
+
+def link_channel_to_source(db: Session, source_id: int, channel_id: int) -> bool:
+    existing = (
+        db.query(models.SourceChannelLink)
+        .filter(
+            models.SourceChannelLink.source_id == source_id,
+            models.SourceChannelLink.channel_id == channel_id,
+        )
+        .first()
+    )
+    if existing:
+        return True
+    link = models.SourceChannelLink(source_id=source_id, channel_id=channel_id)
+    db.add(link)
+    db.commit()
+    return True
+
+
+def unlink_channel_from_source(db: Session, source_id: int, channel_id: int) -> bool:
+    link = (
+        db.query(models.SourceChannelLink)
+        .filter(
+            models.SourceChannelLink.source_id == source_id,
+            models.SourceChannelLink.channel_id == channel_id,
+        )
+        .first()
+    )
+    if not link:
+        return False
+    db.delete(link)
+    db.commit()
+    return True
+
+
+def get_source_ids_for_channel(db: Session, channel_id: int) -> list[int]:
+    rows = (
+        db.query(models.SourceChannelLink.source_id)
+        .filter(models.SourceChannelLink.channel_id == channel_id)
+        .all()
+    )
+    return [r[0] for r in rows]
 
 
 # ---- Sectors ----

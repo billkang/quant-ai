@@ -168,9 +168,15 @@ export const eventApi = {
   deleteSource: (id: number) => api.delete<ApiResponse>(`/event-sources/${id}`),
   triggerSource: (id: number) =>
     api.post<ApiResponse<Record<string, unknown>>>(`/event-sources/${id}/trigger`),
-  getJobs: (limit = 50, sourceId?: number) =>
-    api.get<ApiResponse<EventJob[]>>('/event-jobs', { params: { limit, source_id: sourceId } }),
+  getJobs: (params?: Record<string, unknown>) =>
+    api.get<ApiResponse<EventJob[]>>('/event-jobs', { params }),
   getJob: (id: number) => api.get<ApiResponse<EventJob>>(`/event-jobs/${id}`),
+  getJobsTree: (params?: Record<string, unknown>) =>
+    api.get<ApiResponse<Array<Record<string, unknown>>>>('/event-jobs/monitor', { params }),
+  getJobDetail: (jobId: number) =>
+    api.get<ApiResponse<EventJob & { source_name: string | null }>>(`/event-jobs/${jobId}/detail`),
+  getJobChannelItems: (sourceId: number, channelId: number) =>
+    api.get<ApiResponse<EventItem[]>>(`/event-jobs/${sourceId}/channels/${channelId}/items`),
   getRules: () => api.get<ApiResponse<EventRule[]>>('/event-rules'),
   createRule: (data: Record<string, unknown>) =>
     api.post<ApiResponse<{ id: number }>>('/event-rules', data),
@@ -178,6 +184,26 @@ export const eventApi = {
     api.put<ApiResponse<EventRule>>(`/event-rules/${id}`, data),
   activateRule: (id: number) =>
     api.post<ApiResponse<Record<string, unknown>>>(`/event-rules/${id}/activate`),
+}
+
+export const channelApi = {
+  getChannels: (params?: { data_source_id?: number; enabled?: number }) =>
+    api.get<ApiResponse<ChannelItem[]>>('/channels', { params }),
+  createChannel: (data: Record<string, unknown>) =>
+    api.post<ApiResponse<{ id: number }>>('/channels', data),
+  updateChannel: (id: number, data: Record<string, unknown>) =>
+    api.put<ApiResponse<ChannelItem>>(`/channels/${id}`, data),
+  deleteChannel: (id: number) => api.delete<ApiResponse>(`/channels/${id}`),
+  getChannel: (id: number) => api.get<ApiResponse<ChannelItem>>(`/channels/${id}`),
+}
+
+export const sourceChannelApi = {
+  getSourceChannels: (sourceId: number) =>
+    api.get<ApiResponse<ChannelItem[]>>(`/event-sources/${sourceId}/channels`),
+  linkChannels: (sourceId: number, channelIds: number[]) =>
+    api.post<ApiResponse>(`/event-sources/${sourceId}/channels`, { channel_ids: channelIds }),
+  unlinkChannel: (sourceId: number, channelId: number) =>
+    api.delete<ApiResponse>(`/event-sources/${sourceId}/channels/${channelId}`),
 }
 
 export const strategyApi = {

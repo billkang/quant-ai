@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ErrorBoundary from './components/ErrorBoundary'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
@@ -18,7 +18,6 @@ import Settings from './pages/Settings'
 import EventsPage from './pages/EventsPage'
 import EventRulesPage from './pages/EventRulesPage'
 import PaperTrading from './pages/PaperTrading'
-import DataCollection from './pages/DataCollection'
 import Docs from './pages/Docs'
 import SystemLogs from './pages/SystemLogs'
 
@@ -45,10 +44,19 @@ function App() {
             <Route path="events" element={<EventsPage />} />
             <Route path="event-rules" element={<EventRulesPage />} />
             <Route path="paper-trading" element={<PaperTrading />} />
-            <Route path="data-collection" element={<DataCollection />} />
-            <Route path="event-sources" element={<DataCollection />} />
-            <Route path="event-jobs" element={<DataCollection />} />
-            <Route path="collection-jobs" element={<DataCollection />} />
+            <Route
+              path="data-collection"
+              element={<Navigate to="/data-management#sources" replace />}
+            />
+            <Route
+              path="event-sources"
+              element={<Navigate to="/data-management#channels" replace />}
+            />
+            <Route path="event-jobs" element={<Navigate to="/data-management#monitor" replace />} />
+            <Route
+              path="collection-jobs"
+              element={<Navigate to="/data-management#monitor" replace />}
+            />
             <Route path="docs" element={<Docs />} />
             <Route path="system-logs" element={<SystemLogs />} />
           </Route>

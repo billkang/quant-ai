@@ -245,6 +245,7 @@ class EventSource(Base):
     schedule = Column(String(100), default="0 */6 * * *")  # cron expression
     enabled = Column(Integer, default=1)
     is_builtin = Column(Integer, default=0)
+    category = Column(String(20), nullable=True)  # stock_info / global_event
     last_fetched_at = Column(DateTime, nullable=True)
     last_error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -255,15 +256,28 @@ class DataChannel(Base):
     __tablename__ = "data_channels"
 
     id = Column(Integer, primary_key=True, index=True)
+    data_source_id = Column(Integer, ForeignKey("event_sources.id"), index=True, nullable=True)
     name = Column(String(100), nullable=False)
-    provider = Column(String(50), nullable=False)  # akshare / eastmoney / yahoo
+    collection_method = Column(String(50), nullable=False)  # api / rss / crawler / akshare
     endpoint = Column(String(500), nullable=True)
     headers = Column(JSON, default=dict)
     timeout = Column(Integer, default=30)
     proxy_url = Column(String(500), nullable=True)
-    is_active = Column(Integer, default=1)
+    config = Column(JSON, default=dict)
+    enabled = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SourceChannelLink(Base):
+    __tablename__ = "source_channel_links"
+
+    source_id = Column(
+        Integer, ForeignKey("event_sources.id", ondelete="CASCADE"), primary_key=True
+    )
+    channel_id = Column(
+        Integer, ForeignKey("data_channels.id", ondelete="CASCADE"), primary_key=True
+    )
 
 
 class Sector(Base):
@@ -285,7 +299,9 @@ class EventJob(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     source_id = Column(Integer, ForeignKey("event_sources.id"), index=True)
+    channel_id = Column(Integer, index=True, nullable=True)
     status = Column(String(20), default="running")  # running / success / failed
+    trigger_type = Column(String(20), default="auto")  # auto / manual
     new_events_count = Column(Integer, default=0)
     duplicate_count = Column(Integer, default=0)
     error_count = Column(Integer, default=0)

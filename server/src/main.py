@@ -43,11 +43,13 @@ def _run_migrations():
 def _run_seeds():
     try:
         from src.seed_builtin_strategies import main as seed_strategies
+        from src.seed_data_defaults import main as seed_data
         from src.seed_event_defaults import main as seed_events
         from src.seed_stocks import main as seed_stocks
 
         seed_stocks()
         seed_strategies()
+        seed_data()
         seed_events()
     except Exception as e:
         import logging

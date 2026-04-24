@@ -16,10 +16,12 @@ logger = logging.getLogger(__name__)
 class BaseFetcher:
     """Base class for event fetchers."""
 
-    def __init__(self, db: Session, source: models.EventSource):
+    def __init__(self, db: Session, source: models.EventSource, channel_id: int = None):
         self.db = db
         self.source = source
+        self.channel_id = channel_id
         self.pipeline = EventPipelineService(db)
+        self.trigger_type = "auto"
 
     def fetch(self) -> dict:
         """Fetch events from source. Returns summary dict."""
@@ -28,7 +30,9 @@ class BaseFetcher:
     def create_job(self) -> models.EventJob:
         job = models.EventJob(
             source_id=self.source.id,
+            channel_id=self.channel_id,
             status="running",
+            trigger_type=self.trigger_type,
         )
         self.db.add(job)
         self.db.commit()
@@ -383,13 +387,21 @@ FETCHER_REGISTRY = {
 }
 
 
-def run_fetcher(db: Session, source: models.EventSource) -> dict:
+def run_fetcher(
+    db: Session,
+    source: models.EventSource,
+    channel_id: int = None,
+    fetcher_type: str = None,
+    trigger_type: str = "auto",
+) -> dict:
     """Run a fetcher for a given event source."""
-    fetcher_class = FETCHER_REGISTRY.get(cast(str, source.source_type))
+    effective_type = fetcher_type or cast(str, source.source_type)
+    fetcher_class = FETCHER_REGISTRY.get(effective_type)
     if not fetcher_class:
         return {
             "status": "error",
-            "message": f"Unknown source type: {source.source_type}. Supported: {list(FETCHER_REGISTRY.keys())}",
+            "message": f"Unknown source type: {effective_type}. Supported: {list(FETCHER_REGISTRY.keys())}",
         }
-    fetcher = fetcher_class(db, source)
+    fetcher = fetcher_class(db, source, channel_id)
+    fetcher.trigger_type = trigger_type
     return fetcher.fetch()

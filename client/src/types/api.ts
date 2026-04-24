@@ -291,21 +291,46 @@ export interface EventSource {
   schedule: string
   enabled: number
   is_builtin: number
+  category: string | null
+  selected_channel_ids: number[]
   last_fetched_at: string | null
   last_error: string | null
   created_at: string
 }
 
+export interface ChannelItem {
+  id: number
+  dataSourceId: number
+  dataSourceName: string | null
+  referencingSourceIds: number[]
+  referencingSourceNames: string[]
+  name: string
+  collectionMethod: string
+  endpoint: string | null
+  headers: Record<string, unknown>
+  timeout: number
+  proxyUrl: string | null
+  config: Record<string, unknown>
+  enabled: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface EventJob {
   id: number
   source_id: number
+  channel_id?: number
+  channel_name?: string | null
   status: string
+  trigger_type: string
   new_events_count: number
   duplicate_count: number
   error_count: number
   progress?: number
   started_at: string
   completed_at: string | null
+  logs?: string | null
+  error_message?: string | null
 }
 
 export interface EventRule {

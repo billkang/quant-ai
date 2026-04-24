@@ -35,10 +35,8 @@ const navItems = [
   { key: '/backtest', label: '回测报告', icon: BarChartOutlined },
   { key: '/portfolio', label: '资产组合', icon: FundOutlined },
   { key: '/paper-trading', label: '虚拟盘', icon: CreditCardOutlined },
-  { key: '/events', label: '事件查询', icon: AlertOutlined },
-  { key: '/data-collection', label: '数据采集', icon: CloudSyncOutlined },
-  { key: '/event-rules', label: '规则管理', icon: SafetyCertificateOutlined },
   { key: '/data-management', label: '数据管理', icon: DatabaseOutlined },
+  { key: '/event-rules', label: '规则管理', icon: SafetyCertificateOutlined },
   { key: '/settings', label: '系统设置', icon: SettingOutlined },
   { key: '/docs', label: '使用手册', icon: QuestionCircleOutlined },
 ]
