@@ -366,8 +366,11 @@ def seed_event_sources(db: Session) -> None:
     for s in DEFAULT_EVENT_SOURCES:
         existing = db.query(EventSource).filter(EventSource.name == s["name"]).first()
         if existing:
+            if existing.is_builtin != 1:
+                existing.is_builtin = 1
+                db.commit()
             continue
-        source = EventSource(**s)
+        source = EventSource(**s, is_builtin=1)
         db.add(source)
         db.commit()
 
@@ -480,6 +483,124 @@ def seed_demo_events(db: Session) -> None:
         db.commit()
 
 
+def seed_data_channels(db: Session) -> None:
+    from src.models.models import DataChannel
+
+    defaults = [
+        {"name": "AkShare", "provider": "akshare", "timeout": 30, "is_active": 1},
+        {"name": "东方财富", "provider": "eastmoney", "timeout": 30, "is_active": 1},
+        {"name": "Yahoo Finance", "provider": "yahoo", "timeout": 30, "is_active": 1},
+    ]
+    for d in defaults:
+        existing = db.query(DataChannel).filter(DataChannel.provider == d["provider"]).first()
+        if existing:
+            continue
+        channel = DataChannel(**d)
+        db.add(channel)
+        db.commit()
+
+
+def seed_sectors(db: Session) -> None:
+    from src.models.models import Sector
+
+    c_sectors = [
+        ("A01", "农业"),
+        ("A02", "林业"),
+        ("A03", "畜牧业"),
+        ("A04", "渔业"),
+        ("B06", "煤炭开采和洗选业"),
+        ("B07", "石油和天然气开采业"),
+        ("B08", "黑色金属矿采选业"),
+        ("B09", "有色金属矿采选业"),
+        ("B10", "非金属矿采选业"),
+        ("B11", "开采辅助活动"),
+        ("B12", "其他采矿业"),
+        ("C13", "农副食品加工业"),
+        ("C14", "食品制造业"),
+        ("C15", "酒、饮料和精制茶制造业"),
+        ("C16", "烟草制品业"),
+        ("C17", "纺织业"),
+        ("C18", "纺织服装、服饰业"),
+        ("C19", "皮革、毛皮、羽毛及其制品和制鞋业"),
+        ("C20", "木材加工和木、竹、藤、棕、草制品业"),
+        ("C21", "家具制造业"),
+        ("C22", "造纸和纸制品业"),
+        ("C23", "印刷和记录媒介复制业"),
+        ("C24", "文教、工美、体育和娱乐用品制造业"),
+        ("C25", "石油加工、炼焦和核燃料加工业"),
+        ("C26", "化学原料和化学制品制造业"),
+        ("C27", "医药制造业"),
+        ("C28", "化学纤维制造业"),
+        ("C29", "橡胶和塑料制品业"),
+        ("C30", "非金属矿物制品业"),
+        ("C31", "黑色金属冶炼和压延加工业"),
+        ("C32", "有色金属冶炼和压延加工业"),
+        ("C33", "金属制品业"),
+        ("C34", "通用设备制造业"),
+        ("C35", "专用设备制造业"),
+        ("C36", "汽车制造业"),
+        ("C37", "铁路、船舶、航空航天和其他运输设备制造业"),
+        ("C38", "电气机械和器材制造业"),
+        ("C39", "计算机、通信和其他电子设备制造业"),
+        ("C40", "仪器仪表制造业"),
+        ("C41", "其他制造业"),
+        ("C42", "废弃资源综合利用业"),
+        ("D44", "电力、热力生产和供应业"),
+        ("D45", "燃气生产和供应业"),
+        ("D46", "水的生产和供应业"),
+        ("E47", "房屋建筑业"),
+        ("E48", "土木工程建筑业"),
+        ("E49", "建筑安装业"),
+        ("E50", "建筑装饰和其他建筑业"),
+        ("F51", "批发业"),
+        ("F52", "零售业"),
+        ("G53", "铁路运输业"),
+        ("G54", "道路运输业"),
+        ("G55", "水上运输业"),
+        ("G56", "航空运输业"),
+        ("G57", "管道运输业"),
+        ("G58", "装卸搬运和运输代理业"),
+        ("G59", "仓储业"),
+        ("G60", "邮政业"),
+        ("H61", "住宿业"),
+        ("H62", "餐饮业"),
+        ("I63", "电信、广播电视和卫星传输服务"),
+        ("I64", "互联网和相关服务"),
+        ("I65", "软件和信息技术服务业"),
+        ("J66", "货币金融服务"),
+        ("J67", "资本市场服务"),
+        ("J68", "保险业"),
+        ("J69", "其他金融业"),
+        ("K70", "房地产业"),
+        ("L71", "租赁业"),
+        ("L72", "商务服务业"),
+        ("M73", "研究和试验发展"),
+        ("M74", "专业技术服务业"),
+        ("M75", "科技推广和应用服务业"),
+        ("N76", "水利管理业"),
+        ("N77", "生态保护和环境治理业"),
+        ("N78", "公共设施管理业"),
+        ("O79", "居民服务业"),
+        ("O80", "机动车、电子产品和日用产品修理业"),
+        ("O81", "其他服务业"),
+        ("P82", "教育"),
+        ("Q83", "卫生"),
+        ("Q84", "社会工作"),
+        ("R85", "新闻和出版业"),
+        ("R86", "广播、电视、电影和影视录音制作业"),
+        ("R87", "文化艺术业"),
+        ("R88", "体育"),
+        ("R89", "娱乐业"),
+    ]
+    for code, name in c_sectors:
+        existing = db.query(Sector).filter(Sector.code == code).first()
+        if existing:
+            continue
+        sector = Sector(code=code, name=name, level=1, is_enabled=1, source="csrc")
+        db.add(sector)
+        db.commit()
+
+
 def main():
     db = SessionLocal()
     try:
@@ -487,6 +608,8 @@ def main():
         seed_event_rules(db)
         seed_event_jobs(db)
         seed_demo_events(db)
+        seed_data_channels(db)
+        seed_sectors(db)
         print("Default event data seeded successfully.")
     finally:
         db.close()

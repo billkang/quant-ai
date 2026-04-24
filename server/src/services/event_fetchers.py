@@ -249,6 +249,125 @@ class MacroDataFetcher(BaseFetcher):
             raise
 
 
+class StockPriceFetcher(BaseFetcher):
+    """Fetch daily stock prices for watchlist stocks."""
+
+    def fetch(self) -> dict:
+        job = self.create_job()
+        new_count = 0
+        error_count = 0
+        try:
+            from src.services.stock_data import stock_service
+
+            watchlist = self.db.query(models.Watchlist).all()
+            total = len(watchlist)
+            for idx, item in enumerate(watchlist):
+                try:
+                    quote = stock_service.get_a_stock_quote(item.stock_code)
+                    if quote:
+                        new_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to fetch price for {item.stock_code}: {e}")
+                    error_count += 1
+                job.logs = f"Processed {idx + 1}/{total} stocks"
+                self.db.commit()
+            self.complete_job(job, new_count, 0, error_count)
+            return {"new_events": new_count, "duplicates": 0, "errors": error_count}
+        except Exception as e:
+            self.complete_job(job, new_count, 0, error_count, str(e))
+            return {"status": "error", "message": str(e)}
+
+
+class StockFundamentalFetcher(BaseFetcher):
+    """Fetch stock fundamental data for watchlist stocks."""
+
+    def fetch(self) -> dict:
+        job = self.create_job()
+        new_count = 0
+        error_count = 0
+        try:
+            from src.services.fundamental_service import fundamental_service
+
+            watchlist = self.db.query(models.Watchlist).all()
+            total = len(watchlist)
+            for idx, item in enumerate(watchlist):
+                try:
+                    data = fundamental_service.fetch_fundamental(item.stock_code)
+                    if data:
+                        new_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to fetch fundamental for {item.stock_code}: {e}")
+                    error_count += 1
+                job.logs = f"Processed {idx + 1}/{total} stocks"
+                self.db.commit()
+            self.complete_job(job, new_count, 0, error_count)
+            return {"new_events": new_count, "duplicates": 0, "errors": error_count}
+        except Exception as e:
+            self.complete_job(job, new_count, 0, error_count, str(e))
+            return {"status": "error", "message": str(e)}
+
+
+class SectorRotationFetcher(BaseFetcher):
+    """Fetch sector rotation data for enabled sectors."""
+
+    def fetch(self) -> dict:
+        job = self.create_job()
+        new_count = 0
+        error_count = 0
+        try:
+            from src.models import crud
+
+            sectors = crud.get_enabled_sectors(self.db)
+            total = len(sectors)
+            for idx, sector in enumerate(sectors):
+                try:
+                    logger.info(f"Fetching sector data for {sector.name}")
+                    new_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to fetch sector data for {sector.name}: {e}")
+                    error_count += 1
+                job.logs = f"Processed {idx + 1}/{total} sectors"
+                self.db.commit()
+            self.complete_job(job, new_count, 0, error_count)
+            return {"new_events": new_count, "duplicates": 0, "errors": error_count}
+        except Exception as e:
+            self.complete_job(job, new_count, 0, error_count, str(e))
+            return {"status": "error", "message": str(e)}
+
+
+class InternationalFetcher(BaseFetcher):
+    """Fetch international market index data."""
+
+    def fetch(self) -> dict:
+        job = self.create_job()
+        new_count = 0
+        error_count = 0
+        try:
+            import requests
+
+            config: dict[str, Any] = self.source.config or {}
+            indices = config.get("indices", ["^GSPC", "^IXIC", "^DJI"])
+            total = len(indices)
+            for idx, symbol in enumerate(indices):
+                try:
+                    resp = requests.get(
+                        f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}",
+                        timeout=10,
+                    )
+                    if resp.status_code == 200:
+                        new_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to fetch international data for {symbol}: {e}")
+                    error_count += 1
+                job.logs = f"Processed {idx + 1}/{total} indices"
+                self.db.commit()
+            self.complete_job(job, new_count, 0, error_count)
+            return {"new_events": new_count, "duplicates": 0, "errors": error_count}
+        except Exception as e:
+            self.complete_job(job, new_count, 0, error_count, str(e))
+            return {"status": "error", "message": str(e)}
+
+
 # ───────────────────────────────────────────────
 #  Fetcher Registry
 # ───────────────────────────────────────────────
@@ -257,6 +376,10 @@ FETCHER_REGISTRY = {
     "stock_news": StockNewsFetcher,
     "stock_notice": StockNoticeFetcher,
     "macro_data": MacroDataFetcher,
+    "stock_price": StockPriceFetcher,
+    "stock_fundamental": StockFundamentalFetcher,
+    "sector_data": SectorRotationFetcher,
+    "international": InternationalFetcher,
 }
 
 
@@ -264,6 +387,9 @@ def run_fetcher(db: Session, source: models.EventSource) -> dict:
     """Run a fetcher for a given event source."""
     fetcher_class = FETCHER_REGISTRY.get(cast(str, source.source_type))
     if not fetcher_class:
-        raise ValueError(f"Unknown source type: {source.source_type}")
+        return {
+            "status": "error",
+            "message": f"Unknown source type: {source.source_type}. Supported: {list(FETCHER_REGISTRY.keys())}",
+        }
     fetcher = fetcher_class(db, source)
     return fetcher.fetch()

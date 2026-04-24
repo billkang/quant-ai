@@ -193,5 +193,51 @@ class StockDataService:
             print(f"Error fetching {symbol} kline: {e}")
             return []
 
+    def get_market_indices(self) -> dict | None:
+        try:
+            indices = {}
+            for code in ["000001", "399001", "399006"]:
+                quote = self.get_a_stock_quote(code)
+                if quote:
+                    indices[code] = quote
+            return indices
+        except Exception as e:
+            print(f"Error fetching market indices: {e}")
+            return None
+
+    def get_sector_data(self) -> list | None:
+        try:
+            resp = requests.get(
+                "https://push2.eastmoney.com/api/qt/clist/get",
+                params={
+                    "pn": 1,
+                    "pz": 50,
+                    "po": 1,
+                    "np": 1,
+                    "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+                    "fltt": 2,
+                    "invt": 2,
+                    "fid": "f3",
+                    "fs": "m:90+t:2",
+                    "fields": "f12,f14,f3,f4",
+                },
+                timeout=5,
+            )
+            data = resp.json()
+            sectors = []
+            for item in data.get("data", {}).get("diff", []):
+                sectors.append(
+                    {
+                        "code": item.get("f12", ""),
+                        "name": item.get("f14", ""),
+                        "changePercent": item.get("f3", 0) or 0,
+                        "change": item.get("f4", 0) or 0,
+                    }
+                )
+            return sectors
+        except Exception as e:
+            print(f"Error fetching sector data: {e}")
+            return None
+
 
 stock_service = StockDataService()

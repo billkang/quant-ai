@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import datetime
 
@@ -12,6 +13,7 @@ from .event_pipeline_service import EventPipelineService
 from .fundamental_service import fundamental_service
 from .indicator import indicator_service
 from .news import news_service
+from .progress_reporter import ProgressReporter, register_reporter, unregister_reporter
 from .stock_data import stock_service
 
 logger = logging.getLogger(__name__)
@@ -67,9 +69,16 @@ class SchedulerService:
         )
         self.scheduler.add_job(
             self.interval_news_fetch,
-            CronTrigger(hour="*/6", minute=0),
+            CronTrigger(hour="*", minute=0),
             id="interval_news_fetch",
             name="定时新闻采集",
+            replace_existing=True,
+        )
+        self.scheduler.add_job(
+            self.stock_collection,
+            CronTrigger(day_of_week="mon-fri", hour="9-11,13-14", minute="*/5"),
+            id="stock_collection",
+            name="盘中股票采集",
             replace_existing=True,
         )
         self.scheduler.add_job(
@@ -81,6 +90,122 @@ class SchedulerService:
         )
         self.scheduler.start()
         logger.info("Scheduler started")
+
+    def _is_trading_hours(self):
+        now = datetime.now()
+        weekday = now.weekday()
+        if weekday >= 5:
+            return False
+        hour = now.hour
+        minute = now.minute
+        time_val = hour * 60 + minute
+        morning = (9 * 60 + 30) <= time_val <= (11 * 60 + 30)
+        afternoon = (13 * 60) <= time_val <= (15 * 60)
+        return morning or afternoon
+
+    def _has_running_job(self, db, job_type: str) -> bool:
+        from ..models.models import CollectionJob
+
+        running = (
+            db.query(CollectionJob)
+            .filter(CollectionJob.job_type == job_type, CollectionJob.status == "running")
+            .first()
+        )
+        return running is not None
+
+    def stock_collection(self):
+        if not self._is_trading_hours():
+            return
+        db = SessionLocal()
+        try:
+            if self._has_running_job(db, "stock_collection"):
+                logger.warning("Previous stock collection still running, skipping")
+                return
+            job = crud.create_collection_job(db, "stock_collection")
+            self.run_stock_collection_job(job.id)
+        except Exception as e:
+            logger.error(f"Stock collection trigger failed: {e}")
+        finally:
+            db.close()
+
+    def run_stock_collection_job(self, job_id: int):
+        db = SessionLocal()
+        reporter = ProgressReporter(job_id, db)
+        register_reporter(job_id, reporter)
+        try:
+            from src.api.deps import redis_client
+
+            watchlist = crud.get_watchlist(db)
+            total = len(watchlist)
+            crud.update_collection_job_progress(db, job_id, 0, total)
+            reporter.report(0, total)
+
+            for idx, item in enumerate(watchlist):
+                if reporter.is_cancelled:
+                    break
+                try:
+                    quote = stock_service.get_a_stock_quote(item.stock_code)
+                    if quote:
+                        redis_client.setex(
+                            f"stock:{item.stock_code}:intraday",
+                            300,
+                            json.dumps(quote),
+                        )
+                except Exception as e:
+                    logger.error(f"Failed to fetch quote for {item.stock_code}: {e}")
+                reporter.report(idx + 1, total)
+
+            # Market indices
+            try:
+                indices = stock_service.get_market_indices()
+                if indices:
+                    redis_client.setex("market:indices", 300, json.dumps(indices))
+            except Exception as e:
+                logger.error(f"Failed to fetch market indices: {e}")
+
+            # Sector data
+            try:
+                sectors = stock_service.get_sector_data()
+                if sectors:
+                    redis_client.setex("market:sectors", 300, json.dumps(sectors))
+            except Exception as e:
+                logger.error(f"Failed to fetch sector data: {e}")
+
+            reporter.complete("completed")
+        except Exception as e:
+            logger.error(f"Stock collection job {job_id} failed: {e}")
+            reporter.complete("failed", str(e))
+        finally:
+            unregister_reporter(job_id)
+            db.close()
+
+    def run_news_collection_job(self, job_id: int):
+        db = SessionLocal()
+        reporter = ProgressReporter(job_id, db)
+        register_reporter(job_id, reporter)
+        try:
+            sources = db.query(EventSource).filter(EventSource.enabled == 1).all()
+            total = len(sources)
+            crud.update_collection_job_progress(db, job_id, 0, total)
+            reporter.report(0, total)
+
+            for idx, source in enumerate(sources):
+                if reporter.is_cancelled:
+                    break
+                try:
+                    run_fetcher(db, source)
+                    logger.info(f"Fetched from source: {source.name}")
+                except Exception as e:
+                    logger.error(f"Failed to fetch from {source.name}: {e}")
+                reporter.report(idx + 1, total)
+
+            reporter.complete("completed")
+        except Exception as e:
+            logger.error(f"News collection job {job_id} failed: {e}")
+            reporter.complete("failed", str(e))
+        finally:
+            unregister_reporter(job_id)
+            db.close()
 
     async def stop(self):
         if self.scheduler:
@@ -433,16 +558,13 @@ class SchedulerService:
         logger.info("Running interval news fetch")
         db = SessionLocal()
         try:
-            sources = db.query(EventSource).filter(EventSource.enabled == 1).all()
-            for source in sources:
-                try:
-                    run_fetcher(db, source)
-                    logger.info(f"Fetched from source: {source.name}")
-                except Exception as e:
-                    logger.error(f"Failed to fetch from {source.name}: {e}")
-            logger.info("Interval news fetch completed")
+            if self._has_running_job(db, "news_collection"):
+                logger.warning("Previous news collection still running, skipping")
+                return
+            job = crud.create_collection_job(db, "news_collection")
+            self.run_news_collection_job(job.id)
         except Exception as e:
-            logger.error(f"Interval news fetch failed: {e}")
+            logger.error(f"Interval news fetch trigger failed: {e}")
         finally:
             db.close()
 

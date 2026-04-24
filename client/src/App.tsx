@@ -16,10 +16,11 @@ import StrategyLibrary from './pages/StrategyLibrary'
 import DataManagement from './pages/DataManagement'
 import Settings from './pages/Settings'
 import EventsPage from './pages/EventsPage'
-import EventSourcesPage from './pages/EventSourcesPage'
-import EventJobsPage from './pages/EventJobsPage'
 import EventRulesPage from './pages/EventRulesPage'
 import PaperTrading from './pages/PaperTrading'
+import DataCollection from './pages/DataCollection'
+import Docs from './pages/Docs'
+import SystemLogs from './pages/SystemLogs'
 
 function App() {
   return (
@@ -42,10 +43,14 @@ function App() {
             <Route path="data-management" element={<DataManagement />} />
             <Route path="settings" element={<Settings />} />
             <Route path="events" element={<EventsPage />} />
-            <Route path="event-sources" element={<EventSourcesPage />} />
-            <Route path="event-jobs" element={<EventJobsPage />} />
             <Route path="event-rules" element={<EventRulesPage />} />
             <Route path="paper-trading" element={<PaperTrading />} />
+            <Route path="data-collection" element={<DataCollection />} />
+            <Route path="event-sources" element={<DataCollection />} />
+            <Route path="event-jobs" element={<DataCollection />} />
+            <Route path="collection-jobs" element={<DataCollection />} />
+            <Route path="docs" element={<Docs />} />
+            <Route path="system-logs" element={<SystemLogs />} />
           </Route>
         </Routes>
       </BrowserRouter>

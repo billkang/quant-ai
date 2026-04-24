@@ -159,6 +159,10 @@ Response: 直接返回 service result (无 success_response 包装)
 - 腾讯控股 (00700.HK) - interval: 60
 - 阿里巴巴 (9988.HK) - interval: 60
 
+## 定时采集
+
+系统 SHALL 每小时执行一次自动新闻采集（整点触发）。调度器通过 `CronTrigger(hour="*", minute=0)` 触发，每个数据源仍遵守自身的 `interval_minutes` 和 `last_fetched_at` 去重规则。
+
 ## 状态
 
 ✅ 核心功能已完成

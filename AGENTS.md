@@ -56,6 +56,7 @@ curl http://localhost:8000/api/quant/alerts
 4. **No separate watchlist page**: Functionality merged into Dashboard
 5. **Backend config**: All tool configs live in `server/pyproject.toml` (ruff, mypy, pytest)
 6. **Tests are mandatory**: Every feature or bug-fix PR must include both unit tests and E2E tests. Do not treat tests as an afterthought.
+7. **Documentation is mandatory**: Every feature or bug-fix PR must update the user documentation site (`client/src/docs/content/`) and the relevant developer docs.
 
 ## Code Style Guide
 
@@ -170,6 +171,59 @@ cd server && PYTHONPATH=. pytest -v
 cd client && pnpm run test
 ```
 
+## User Documentation Site
+
+QuantMaster 内置在线文档站（使用手册），路径为 `/docs`。
+
+### 文档站架构
+
+- **入口页面**: `client/src/pages/Docs.tsx`
+- **Markdown 内容**: `client/public/docs/*.md`
+- **配置文件**: `client/src/docs/config.ts`
+- **路由**: `App.tsx` 中 `/docs` 路由
+- **导航入口**: `Layout.tsx` 侧边栏 "使用手册"
+
+### 内容组织
+
+文档按分类组织，Markdown 文件放在 `client/public/docs/`，结构在 `config.ts` 中注册：
+
+```
+client/public/docs/
+├── overview.md           # 产品概览
+├── dashboard.md          # 仪表盘
+├── market-analysis.md    # 行情分析
+├── strategy-management.md# 策略管理
+├── backtest.md           # 回测报告
+├── portfolio.md          # 资产组合
+├── paper-trading.md      # 虚拟盘
+├── events.md             # 事件查询
+├── screener.md           # 股票筛选器
+├── alerts.md             # 告警与规则
+├── data-management.md    # 数据管理
+└── settings.md           # 系统设置
+```
+
+### 何时更新文档
+
+**任何新增或修改用户可见功能的 PR，必须同步更新对应文档章节。** 包括但不限于：
+- 新增页面或功能模块
+- 修改现有功能的交互流程
+- 新增配置项、筛选条件、指标字段
+- 调整 UI 布局或操作路径
+
+### 如何更新文档
+
+1. 找到对应的功能模块 `.md` 文件（如修改了回测功能，编辑 `backtest.md`）
+2. 使用 Markdown 格式更新内容，支持以下语法：
+   - `#` / `##` / `###` 标题
+   - `-` 无序列表
+   - `**bold**` 加粗
+   - `` `code` `` 行内代码
+   - ` ``` ` 代码块
+   - `| table |` 表格
+3. 如需新增章节，在 `client/src/docs/config.ts` 的 `docCategories` 中注册
+4. 如需新增分类，新建 `.md` 文件放入 `client/public/docs/`，并在 `config.ts` 中引入
+
 ## Important Files
 
 - `docker-compose.yml` - Orchestration
@@ -182,3 +236,5 @@ cd client && pnpm run test
 - `server/pyproject.toml` - Python dependencies and tool configs
 - `client/src/pages/` - Page components
 - `client/src/components/Layout.tsx` - Main layout
+- `client/public/docs/` - User documentation Markdown files
+- `client/src/docs/config.ts` - Documentation site navigation config

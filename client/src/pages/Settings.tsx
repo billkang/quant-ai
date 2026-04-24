@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Card,
   Typography,
@@ -24,7 +24,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(false)
   const [form] = Form.useForm()
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const [setRes, histRes] = await Promise.all([
@@ -44,11 +44,11 @@ export default function Settings() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [fetchData])
 
   const handleSaveSettings = async (values: NotificationSettingData) => {
     try {

@@ -507,3 +507,262 @@ def get_unread_alert_count(db: Session, user_id: int = None):
     if user_id is not None:
         query = query.filter(models.Alert.user_id == user_id)
     return query.count()
+
+
+# ---- Data Channels ----
+
+
+def get_data_channels(db: Session) -> list[models.DataChannel]:
+    return db.query(models.DataChannel).all()
+
+
+def get_data_channel_by_id(db: Session, channel_id: int) -> models.DataChannel | None:
+    return db.query(models.DataChannel).filter(models.DataChannel.id == channel_id).first()
+
+
+def create_data_channel(db: Session, **kwargs) -> models.DataChannel:
+    channel = models.DataChannel(**kwargs)
+    db.add(channel)
+    db.commit()
+    db.refresh(channel)
+    return channel
+
+
+def update_data_channel(db: Session, channel_id: int, **kwargs) -> models.DataChannel | None:
+    channel = get_data_channel_by_id(db, channel_id)
+    if not channel:
+        return None
+    for key, value in kwargs.items():
+        if hasattr(channel, key):
+            setattr(channel, key, value)
+    db.commit()
+    db.refresh(channel)
+    return channel
+
+
+def delete_data_channel(db: Session, channel_id: int) -> bool:
+    channel = get_data_channel_by_id(db, channel_id)
+    if channel:
+        db.delete(channel)
+        db.commit()
+        return True
+    return False
+
+
+# ---- Sectors ----
+
+
+def get_sectors(db: Session, level: int = None, is_enabled: bool = None) -> list[models.Sector]:
+    query = db.query(models.Sector)
+    if level is not None:
+        query = query.filter(models.Sector.level == level)
+    if is_enabled is not None:
+        query = query.filter(models.Sector.is_enabled == (1 if is_enabled else 0))
+    return query.order_by(models.Sector.code).all()
+
+
+def get_sector_by_id(db: Session, sector_id: int) -> models.Sector | None:
+    return db.query(models.Sector).filter(models.Sector.id == sector_id).first()
+
+
+def get_enabled_sectors(db: Session) -> list[models.Sector]:
+    return (
+        db.query(models.Sector)
+        .filter(models.Sector.is_enabled == 1)
+        .order_by(models.Sector.code)
+        .all()
+    )
+
+
+def create_sector(db: Session, **kwargs) -> models.Sector:
+    sector = models.Sector(**kwargs)
+    db.add(sector)
+    db.commit()
+    db.refresh(sector)
+    return sector
+
+
+def update_sector(db: Session, sector_id: int, **kwargs) -> models.Sector | None:
+    sector = get_sector_by_id(db, sector_id)
+    if not sector:
+        return None
+    for key, value in kwargs.items():
+        if hasattr(sector, key):
+            setattr(sector, key, value)
+    db.commit()
+    db.refresh(sector)
+    return sector
+
+
+def delete_sector(db: Session, sector_id: int) -> bool:
+    sector = get_sector_by_id(db, sector_id)
+    if sector:
+        db.delete(sector)
+        db.commit()
+        return True
+    return False
+
+
+# ---- Collection Jobs ----
+
+
+def create_collection_job(db: Session, job_type: str, total_items: int = 0) -> models.CollectionJob:
+    job = models.CollectionJob(job_type=job_type, status="running", total_items=total_items)
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    return job
+
+
+def get_collection_jobs(
+    db: Session,
+    job_type: str = None,
+    status: str = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    query = db.query(models.CollectionJob)
+    if job_type:
+        query = query.filter(models.CollectionJob.job_type == job_type)
+    if status:
+        query = query.filter(models.CollectionJob.status == status)
+    return query.order_by(models.CollectionJob.created_at.desc()).offset(offset).limit(limit).all()
+
+
+def get_collection_job_by_id(db: Session, job_id: int) -> models.CollectionJob | None:
+    return db.query(models.CollectionJob).filter(models.CollectionJob.id == job_id).first()
+
+
+def update_collection_job_progress(
+    db: Session, job_id: int, processed_items: int, total_items: int = None
+) -> models.CollectionJob | None:
+    job = get_collection_job_by_id(db, job_id)
+    if not job:
+        return None
+    job.processed_items = processed_items
+    if total_items is not None:
+        job.total_items = total_items
+    if job.total_items > 0:
+        job.progress = round((job.processed_items / job.total_items) * 100, 2)
+    db.commit()
+    db.refresh(job)
+    return job
+
+
+def complete_collection_job(
+    db: Session,
+    job_id: int,
+    status: str = "completed",
+    error_log: str = None,
+) -> models.CollectionJob | None:
+    job = get_collection_job_by_id(db, job_id)
+    if not job:
+        return None
+    job.status = status
+    job.end_time = datetime.utcnow()
+    if error_log:
+        job.error_log = error_log
+    db.commit()
+    db.refresh(job)
+    return job
+
+
+def cancel_collection_job(db: Session, job_id: int) -> models.CollectionJob | None:
+    job = get_collection_job_by_id(db, job_id)
+    if not job or job.status != "running":
+        return None
+    job.status = "cancelled"
+    job.end_time = datetime.utcnow()
+    db.commit()
+    db.refresh(job)
+    return job
+
+
+# ---- System Logs ----
+
+
+def create_system_log(
+    db: Session,
+    level: str,
+    category: str,
+    message: str,
+    details: dict = None,
+    source: str = None,
+) -> models.SystemLog:
+    log = models.SystemLog(
+        level=level.upper(),
+        category=category,
+        message=message,
+        details=details or {},
+        source=source,
+    )
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    return log
+
+
+def get_system_logs(
+    db: Session,
+    level: str = None,
+    category: str = None,
+    source: str = None,
+    start_time=None,
+    end_time=None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    query = db.query(models.SystemLog)
+    if level:
+        query = query.filter(models.SystemLog.level == level.upper())
+    if category:
+        query = query.filter(models.SystemLog.category == category)
+    if source:
+        query = query.filter(models.SystemLog.source == source)
+    if start_time:
+        query = query.filter(models.SystemLog.created_at >= start_time)
+    if end_time:
+        query = query.filter(models.SystemLog.created_at <= end_time)
+    total = query.count()
+    items = query.order_by(models.SystemLog.created_at.desc()).offset(offset).limit(limit).all()
+    return items, total
+
+
+def get_system_log_by_id(db: Session, log_id: int) -> models.SystemLog | None:
+    return db.query(models.SystemLog).filter(models.SystemLog.id == log_id).first()
+
+
+def delete_system_logs_by_time(db: Session, before) -> int:
+    result = db.query(models.SystemLog).filter(models.SystemLog.created_at < before).delete()
+    db.commit()
+    return result
+
+
+def delete_system_logs_by_ids(db: Session, log_ids: list[int]) -> int:
+    result = db.query(models.SystemLog).filter(models.SystemLog.id.in_(log_ids)).delete()
+    db.commit()
+    return result
+
+
+def get_system_log_stats(db: Session, hours: int = 24):
+    from datetime import datetime, timedelta
+
+    since = datetime.utcnow() - timedelta(hours=hours)
+    total = db.query(models.SystemLog).filter(models.SystemLog.created_at >= since).count()
+    levels = (
+        db.query(models.SystemLog.level, db.func.count(models.SystemLog.id))
+        .filter(models.SystemLog.created_at >= since)
+        .group_by(models.SystemLog.level)
+        .all()
+    )
+    categories = (
+        db.query(models.SystemLog.category, db.func.count(models.SystemLog.id))
+        .filter(models.SystemLog.created_at >= since)
+        .group_by(models.SystemLog.category)
+        .all()
+    )
+    return {
+        "total": total,
+        "by_level": dict(levels),
+        "by_category": dict(categories),
+    }

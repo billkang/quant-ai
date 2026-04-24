@@ -6,7 +6,7 @@ import App from './App'
 import { useTheme } from './hooks/useTheme'
 import './index.css'
 
-function ThemedApp() {
+export function ThemedApp() {
   const { antdToken, algorithm } = useTheme()
   const antdAlgorithm = algorithm === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm
   return (

@@ -37,6 +37,9 @@ import type {
   StockNoticeItem,
   NotificationSettingData,
   NotificationItem,
+  CollectionJobItem,
+  SystemLogItem,
+  SystemLogStats,
 } from '../types/api'
 
 const api = axios.create({
@@ -165,7 +168,8 @@ export const eventApi = {
   deleteSource: (id: number) => api.delete<ApiResponse>(`/event-sources/${id}`),
   triggerSource: (id: number) =>
     api.post<ApiResponse<Record<string, unknown>>>(`/event-sources/${id}/trigger`),
-  getJobs: (limit = 50) => api.get<ApiResponse<EventJob[]>>('/event-jobs', { params: { limit } }),
+  getJobs: (limit = 50, sourceId?: number) =>
+    api.get<ApiResponse<EventJob[]>>('/event-jobs', { params: { limit, source_id: sourceId } }),
   getJob: (id: number) => api.get<ApiResponse<EventJob>>(`/event-jobs/${id}`),
   getRules: () => api.get<ApiResponse<EventRule[]>>('/event-rules'),
   createRule: (data: Record<string, unknown>) =>
@@ -231,6 +235,100 @@ export const notificationApi = {
     ),
   markRead: (id: number) => api.put<ApiResponse>(`/notifications/${id}/read`),
   testChannel: (channel: string) => api.post<ApiResponse>('/notifications/test', { channel }),
+}
+
+export const collectionApi = {
+  getJobs: (params?: { jobType?: string; status?: string; page?: number; pageSize?: number }) =>
+    api.get<
+      ApiResponse<{ items: CollectionJobItem[]; total: number; page: number; pageSize: number }>
+    >('/collection/jobs', { params }),
+  getJob: (id: number) => api.get<ApiResponse<CollectionJobItem>>(`/collection/jobs/${id}`),
+  triggerJob: (jobType: string) =>
+    api.post<ApiResponse<{ id: number }>>('/collection/jobs/trigger', { job_type: jobType }),
+  cancelJob: (id: number) => api.post<ApiResponse>(`/collection/jobs/${id}/cancel`),
+}
+
+export const dataChannelApi = {
+  getChannels: () =>
+    api.get<
+      ApiResponse<
+        Array<{
+          id: number
+          name: string
+          provider: string
+          endpoint: string | null
+          headers: Record<string, unknown>
+          timeout: number
+          proxyUrl: string | null
+          isActive: number
+          createdAt: string | null
+        }>
+      >
+    >('/data-channels'),
+  createChannel: (data: Record<string, unknown>) =>
+    api.post<ApiResponse<{ id: number }>>('/data-channels', data),
+  updateChannel: (id: number, data: Record<string, unknown>) =>
+    api.put<ApiResponse<{ id: number }>>(`/data-channels/${id}`, data),
+  deleteChannel: (id: number) => api.delete<ApiResponse>(`/data-channels/${id}`),
+}
+
+export const sectorApi = {
+  getSectors: (params?: { level?: number; is_enabled?: boolean }) =>
+    api.get<
+      ApiResponse<
+        Array<{
+          id: number
+          code: string
+          name: string
+          level: number
+          parentId: number | null
+          isEnabled: number
+          source: string
+        }>
+      >
+    >('/sectors', { params }),
+  getEnabledSectors: () =>
+    api.get<
+      ApiResponse<
+        Array<{ id: number; code: string; name: string; level: number; parentId: number | null }>
+      >
+    >('/sectors/enabled'),
+  createSector: (data: Record<string, unknown>) =>
+    api.post<ApiResponse<{ id: number }>>('/sectors', data),
+  updateSector: (id: number, data: Record<string, unknown>) =>
+    api.put<ApiResponse<{ id: number }>>(`/sectors/${id}`, data),
+  deleteSector: (id: number) => api.delete<ApiResponse>(`/sectors/${id}`),
+}
+
+export const systemLogApi = {
+  getLogs: (params?: {
+    level?: string
+    category?: string
+    source?: string
+    start_time?: string
+    end_time?: string
+    limit?: number
+    offset?: number
+  }) =>
+    api.get<
+      ApiResponse<{
+        items: SystemLogItem[]
+        total: number
+        limit: number
+        offset: number
+      }>
+    >('/system-logs', { params }),
+  createLog: (data: {
+    level: string
+    category: string
+    message: string
+    details?: Record<string, unknown>
+    source?: string
+  }) => api.post<ApiResponse<SystemLogItem>>('/system-logs', data),
+  deleteLogs: (params?: { before_days?: number; ids?: number[] }) =>
+    api.delete<ApiResponse<{ deleted: number }>>('/system-logs', { params }),
+  getStats: (hours?: number) =>
+    api.get<ApiResponse<SystemLogStats>>('/system-logs/stats', { params: { hours } }),
 }
 
 export default api

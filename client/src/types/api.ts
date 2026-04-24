@@ -290,6 +290,7 @@ export interface EventSource {
   config: Record<string, unknown>
   schedule: string
   enabled: number
+  is_builtin: number
   last_fetched_at: string | null
   last_error: string | null
   created_at: string
@@ -413,4 +414,38 @@ export interface NotificationItem {
   channels: string[]
   isRead: boolean
   createdAt: string
+}
+
+// ---- Collection Job ----
+
+export interface CollectionJobItem {
+  id: number
+  jobType: string
+  status: string
+  progress: number
+  totalItems: number
+  processedItems: number
+  startTime: string | null
+  endTime: string | null
+  errorLog: string | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+// ---- System Log ----
+
+export interface SystemLogItem {
+  id: number
+  level: string
+  category: string
+  message: string
+  details: Record<string, unknown> | null
+  source: string | null
+  createdAt: string
+}
+
+export interface SystemLogStats {
+  total: number
+  byLevel: Record<string, number>
+  byCategory: Record<string, number>
 }

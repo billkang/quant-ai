@@ -9,6 +9,7 @@ import {
   FundOutlined,
   BookOutlined,
   BarChartOutlined,
+  QuestionCircleOutlined,
   DatabaseOutlined,
   BellOutlined,
   LogoutOutlined,
@@ -17,11 +18,10 @@ import {
   FileTextOutlined,
   CheckOutlined,
   AlertOutlined,
-  ApiOutlined,
-  ScheduleOutlined,
   SafetyCertificateOutlined,
   ExperimentOutlined,
   CreditCardOutlined,
+  CloudSyncOutlined,
 } from '@ant-design/icons'
 import api, { notificationApi } from '../services/api'
 import { useTheme } from '../hooks/useTheme'
@@ -36,11 +36,11 @@ const navItems = [
   { key: '/portfolio', label: '资产组合', icon: FundOutlined },
   { key: '/paper-trading', label: '虚拟盘', icon: CreditCardOutlined },
   { key: '/events', label: '事件查询', icon: AlertOutlined },
-  { key: '/event-sources', label: '数据源配置', icon: ApiOutlined },
-  { key: '/event-jobs', label: '采集任务', icon: ScheduleOutlined },
+  { key: '/data-collection', label: '数据采集', icon: CloudSyncOutlined },
   { key: '/event-rules', label: '规则管理', icon: SafetyCertificateOutlined },
   { key: '/data-management', label: '数据管理', icon: DatabaseOutlined },
   { key: '/settings', label: '系统设置', icon: SettingOutlined },
+  { key: '/docs', label: '使用手册', icon: QuestionCircleOutlined },
 ]
 
 const themeSwatches: Record<ThemeKey, string> = {
@@ -406,7 +406,8 @@ export default function Layout() {
               </span>
               <span>v2.1.5</span>
             </div>
-            <button
+            <Link
+              to="/system-logs"
               style={{
                 padding: '6px 12px',
                 borderRadius: 6,
@@ -419,6 +420,7 @@ export default function Layout() {
                 alignItems: 'center',
                 gap: 6,
                 transition: 'all 0.2s ease',
+                textDecoration: 'none',
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.background = 'var(--bg-hover)'
@@ -431,7 +433,7 @@ export default function Layout() {
             >
               <FileTextOutlined style={{ fontSize: 12 }} />
               系统日志
-            </button>
+            </Link>
           </div>
         </aside>
 

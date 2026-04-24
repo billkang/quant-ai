@@ -81,6 +81,7 @@ async def list_event_sources(db: Session = Depends(get_db)):
                 "enabled": s.enabled,
                 "last_fetched_at": s.last_fetched_at.isoformat() if s.last_fetched_at else None,
                 "last_error": s.last_error,
+                "is_builtin": s.is_builtin,
                 "created_at": s.created_at.isoformat() if s.created_at else None,
             }
             for s in sources
@@ -116,6 +117,8 @@ async def delete_event_source(source_id: int, db: Session = Depends(get_db)):
     source = db.query(models.EventSource).filter(models.EventSource.id == source_id).first()
     if not source:
         raise HTTPException(status_code=404, detail="Event source not found")
+    if source.is_builtin == 1:
+        raise HTTPException(status_code=400, detail="内置数据源不可删除")
     db.delete(source)
     db.commit()
     return success_response()
@@ -128,9 +131,11 @@ async def trigger_event_source(source_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Event source not found")
     try:
         result = run_fetcher(db, source)
+        if result.get("status") == "error":
+            return success_response(data=result)
         return success_response(data=result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return success_response(data={"status": "error", "message": str(e)})
 
 
 # ───────────────────────────────────────────────
@@ -139,8 +144,11 @@ async def trigger_event_source(source_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/event-jobs")
-async def list_event_jobs(limit: int = 50, db: Session = Depends(get_db)):
-    jobs = db.query(models.EventJob).order_by(models.EventJob.started_at.desc()).limit(limit).all()
+async def list_event_jobs(source_id: int = None, limit: int = 50, db: Session = Depends(get_db)):
+    query = db.query(models.EventJob)
+    if source_id is not None:
+        query = query.filter(models.EventJob.source_id == source_id)
+    jobs = query.order_by(models.EventJob.started_at.desc()).limit(limit).all()
     return success_response(
         data=[
             {

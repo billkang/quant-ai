@@ -8,7 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api import (
     ai,
     auth,
+    collection,
     dashboard,
+    data_channels,
     events,
     factor_snapshots,
     news,
@@ -18,9 +20,11 @@ from src.api import (
     quant,
     research,
     screener,
+    sectors,
     seed,
     stocks,
     strategies,
+    system_logs,
     ws,
 )
 from src.core.config import settings
@@ -95,6 +99,10 @@ app.include_router(dashboard.router, prefix="/api")
 app.include_router(paper.router, prefix="/api")
 app.include_router(research.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
+app.include_router(collection.router, prefix="/api")
+app.include_router(data_channels.router, prefix="/api")
+app.include_router(sectors.router, prefix="/api")
+app.include_router(system_logs.router, prefix="/api")
 app.include_router(ws.router)
 
 

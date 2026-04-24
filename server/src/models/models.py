@@ -244,8 +244,38 @@ class EventSource(Base):
     config = Column(JSON, default=dict)
     schedule = Column(String(100), default="0 */6 * * *")  # cron expression
     enabled = Column(Integer, default=1)
+    is_builtin = Column(Integer, default=0)
     last_fetched_at = Column(DateTime, nullable=True)
     last_error = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class DataChannel(Base):
+    __tablename__ = "data_channels"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    provider = Column(String(50), nullable=False)  # akshare / eastmoney / yahoo
+    endpoint = Column(String(500), nullable=True)
+    headers = Column(JSON, default=dict)
+    timeout = Column(Integer, default=30)
+    proxy_url = Column(String(500), nullable=True)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Sector(Base):
+    __tablename__ = "sectors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(20), unique=True, index=True, nullable=False)
+    name = Column(String(100), nullable=False)
+    level = Column(Integer, default=1)  # 1=一级行业, 2=二级行业
+    parent_id = Column(Integer, ForeignKey("sectors.id"), nullable=True, index=True)
+    is_enabled = Column(Integer, default=1)
+    source = Column(String(50), default="csrc")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -556,4 +586,36 @@ class Notification(Base):
     content = Column(String, nullable=True)
     channels = Column(JSON, default=list)
     is_read = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class CollectionJob(Base):
+    __tablename__ = "collection_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_type = Column(String(50), nullable=False)
+    status = Column(String(20), default="running")
+    progress = Column(Float, default=0.0)
+    total_items = Column(Integer, default=0)
+    processed_items = Column(Integer, default=0)
+    start_time = Column(DateTime, default=datetime.utcnow)
+    end_time = Column(DateTime, nullable=True)
+    error_log = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SystemLog(Base):
+    __tablename__ = "system_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    level = Column(
+        String(20), nullable=False, default="INFO"
+    )  # DEBUG / INFO / WARNING / ERROR / CRITICAL
+    category = Column(
+        String(50), nullable=False, default="general"
+    )  # scheduler / api / data_collection / event / general
+    message = Column(Text, nullable=False)
+    details = Column(JSON, nullable=True)
+    source = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
