@@ -4,41 +4,102 @@ import { Badge, Dropdown, Space, Input } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   DashboardOutlined,
-  LineChartOutlined,
   SettingOutlined,
-  FundOutlined,
-  BookOutlined,
-  BarChartOutlined,
-  QuestionCircleOutlined,
-  DatabaseOutlined,
   BellOutlined,
   LogoutOutlined,
   UserOutlined,
   SearchOutlined,
   FileTextOutlined,
   CheckOutlined,
+  ContainerOutlined,
+  AppstoreOutlined,
+  ExperimentOutlined,
+  LineChartOutlined,
+  DatabaseOutlined,
+  CloudSyncOutlined,
+  ProfileOutlined,
+  FundOutlined,
+  BarChartOutlined,
+  AreaChartOutlined,
+  PieChartOutlined,
+  ApiOutlined,
+  ScheduleOutlined,
   AlertOutlined,
   SafetyCertificateOutlined,
-  ExperimentOutlined,
-  CreditCardOutlined,
-  CloudSyncOutlined,
+  DesktopOutlined,
+  TeamOutlined,
+  QuestionCircleOutlined,
+  StockOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  BulbOutlined,
+  BgColorsOutlined,
 } from '@ant-design/icons'
 import api, { notificationApi } from '../services/api'
 import { useTheme } from '../hooks/useTheme'
 import type { ThemeKey } from '../styles/themes'
 
-const navItems = [
-  { key: '/', label: '仪表盘', icon: DashboardOutlined },
-  { key: '/market-analysis', label: '行情分析', icon: LineChartOutlined },
-  { key: '/strategy-management', label: '策略管理', icon: ExperimentOutlined },
-  { key: '/strategy-library', label: '策略库', icon: BookOutlined },
-  { key: '/backtest', label: '回测报告', icon: BarChartOutlined },
-  { key: '/portfolio', label: '资产组合', icon: FundOutlined },
-  { key: '/paper-trading', label: '虚拟盘', icon: CreditCardOutlined },
-  { key: '/data-management', label: '数据管理', icon: DatabaseOutlined },
-  { key: '/event-rules', label: '规则管理', icon: SafetyCertificateOutlined },
-  { key: '/settings', label: '系统设置', icon: SettingOutlined },
-  { key: '/docs', label: '使用手册', icon: QuestionCircleOutlined },
+interface NavGroup {
+  key: string
+  label: string
+  icon: React.ComponentType<{ style?: React.CSSProperties }>
+  children: Array<{
+    key: string
+    label: string
+    icon: React.ComponentType<{ style?: React.CSSProperties }>
+  }>
+}
+
+const navGroups: NavGroup[] = [
+  {
+    key: 'dashboard',
+    label: '',
+    icon: DashboardOutlined,
+    children: [{ key: '/', label: 'Dashboard', icon: DashboardOutlined }],
+  },
+  {
+    key: 'research',
+    label: '研究管理',
+    icon: ExperimentOutlined,
+    children: [
+      { key: '/factor-management', label: '因子管理', icon: AppstoreOutlined },
+      { key: '/feature-management', label: '特征管理', icon: ContainerOutlined },
+      { key: '/feature-evaluation', label: '特征评估', icon: LineChartOutlined },
+      { key: '/strategy-management', label: '策略管理', icon: ExperimentOutlined },
+    ],
+  },
+  {
+    key: 'backtest',
+    label: '回测系统',
+    icon: BarChartOutlined,
+    children: [
+      { key: '/backtest-tasks', label: '回测任务', icon: ScheduleOutlined },
+      { key: '/backtest-results', label: '回测结果', icon: BarChartOutlined },
+      { key: '/comparison-analysis', label: '对比分析', icon: AreaChartOutlined },
+      { key: '/backtest-reports', label: '回测报告', icon: FileTextOutlined },
+    ],
+  },
+  {
+    key: 'data',
+    label: '数据管理',
+    icon: DatabaseOutlined,
+    children: [
+      { key: '/data-sources', label: '数据源', icon: ApiOutlined },
+      { key: '/data-collection', label: '数据采集', icon: CloudSyncOutlined },
+      { key: '/event-management', label: '事件管理', icon: AlertOutlined },
+      { key: '/stock-management', label: '股票管理', icon: StockOutlined },
+    ],
+  },
+  {
+    key: 'system',
+    label: '系统管理',
+    icon: SettingOutlined,
+    children: [
+      { key: '/system-status', label: '系统状态', icon: DesktopOutlined },
+      { key: '/user-management', label: '用户管理', icon: TeamOutlined },
+      { key: '/settings', label: '设置', icon: SettingOutlined },
+    ],
+  },
 ]
 
 const themeSwatches: Record<ThemeKey, string> = {
@@ -47,12 +108,19 @@ const themeSwatches: Record<ThemeKey, string> = {
   'midnight-black': '#d946ef',
 }
 
+const themeIcons: Record<ThemeKey, React.ReactNode> = {
+  'ocean-blue': <BgColorsOutlined style={{ color: '#0ea5e9' }} />,
+  'dawn-white': <BulbOutlined style={{ color: '#4f46e5' }} />,
+  'midnight-black': <BgColorsOutlined style={{ color: '#d946ef' }} />,
+}
+
 export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [unreadCount, setUnreadCount] = useState(3)
   const [username, setUsername] = useState<string | null>(null)
   const [searchText, setSearchText] = useState('')
+  const [collapsed, setCollapsed] = useState(false)
   const { currentTheme, setTheme, themeList } = useTheme()
 
   useEffect(() => {
@@ -137,6 +205,8 @@ export default function Layout() {
     return () => clearInterval(interval)
   }, [])
 
+  const sidebarWidth = collapsed ? 64 : 220
+
   return (
     <div
       style={{
@@ -149,8 +219,8 @@ export default function Layout() {
       {/* Full-width Header */}
       <header
         style={{
-          height: 64,
-          padding: '0 24px',
+          height: 56,
+          padding: '0 20px',
           background: 'var(--bg-surface)',
           borderBottom: '1px solid var(--border)',
           display: 'flex',
@@ -160,7 +230,9 @@ export default function Layout() {
         }}
       >
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 180 }}>
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: collapsed ? 40 : 180 }}
+        >
           <span
             className="gradient-text"
             style={{
@@ -169,15 +241,15 @@ export default function Layout() {
               letterSpacing: 0.5,
             }}
           >
-            QuantMaster
+            QuantLab
           </span>
         </div>
 
         {/* Search */}
-        <div style={{ flex: 1, maxWidth: 480, margin: '0 24px' }}>
+        <div style={{ flex: 1, maxWidth: 400, margin: '0 24px' }}>
           <Input
             prefix={<SearchOutlined style={{ color: 'var(--text-muted)' }} />}
-            placeholder="搜索交易对、策略或指标..."
+            placeholder="搜索股票、策略或指标..."
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
             style={{
@@ -191,7 +263,57 @@ export default function Layout() {
 
         {/* Global controls */}
         <Space size={16}>
-          {/* 主题切换 */}
+          {/* Date Range display */}
+          <span
+            style={{
+              fontSize: 13,
+              color: 'var(--text-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <ScheduleOutlined />
+            2024-05-12 ~ 2024-06-11
+          </span>
+
+          {/* Auto refresh toggle */}
+          <span
+            style={{
+              fontSize: 13,
+              color: 'var(--text-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            自动刷新
+            <span
+              style={{
+                width: 36,
+                height: 20,
+                borderRadius: 10,
+                background: 'var(--accent)',
+                position: 'relative',
+                cursor: 'pointer',
+              }}
+            >
+              <span
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  background: '#fff',
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                }}
+              />
+            </span>
+          </span>
+
+          {/* Theme toggle */}
           <Dropdown
             menu={{ items: themeMenuItems }}
             placement="bottomRight"
@@ -235,7 +357,7 @@ export default function Layout() {
             </button>
           </Dropdown>
 
-          {/* 告警入口 */}
+          {/* Alerts */}
           <Link
             to="/alerts"
             data-testid="nav-alerts"
@@ -279,7 +401,7 @@ export default function Layout() {
             )}
           </Link>
 
-          {/* 用户信息 */}
+          {/* User */}
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
             <button
               data-testid="user-menu"
@@ -308,7 +430,7 @@ export default function Layout() {
               }}
             >
               <UserOutlined style={{ fontSize: 16 }} />
-              <span>{username || '用户'}</span>
+              <span>{username || 'Quant User'}</span>
             </button>
           </Dropdown>
         </Space>
@@ -319,54 +441,120 @@ export default function Layout() {
         {/* Sidebar */}
         <aside
           style={{
-            width: 200,
+            width: sidebarWidth,
             flexShrink: 0,
             background: 'var(--bg-surface)',
             borderRight: '1px solid var(--border)',
             display: 'flex',
             flexDirection: 'column',
+            transition: 'width 0.2s ease',
           }}
         >
           {/* Navigation */}
-          <nav style={{ flex: 1, padding: '12px 0', overflowY: 'auto' }}>
-            {navItems.map(item => {
-              const isActive = location.pathname === item.key
-              const Icon = item.icon
+          <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
+            {navGroups.map(group => {
+              if (group.children.length === 1 && group.children[0].key === '/') {
+                // Dashboard single item
+                const item = group.children[0]
+                const isActive = location.pathname === item.key
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.key}
+                    to={item.key}
+                    data-testid={`nav-${item.key.replace('/', '') || 'dashboard'}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '10px 16px',
+                      margin: '4px 8px',
+                      borderRadius: 8,
+                      color: isActive ? '#fff' : 'var(--text-secondary)',
+                      background: isActive ? 'var(--accent)' : 'transparent',
+                      fontSize: 14,
+                      fontWeight: 500,
+                      textDecoration: 'none',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = 'var(--bg-hover)'
+                        e.currentTarget.style.color = 'var(--text-primary)'
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = 'transparent'
+                        e.currentTarget.style.color = 'var(--text-secondary)'
+                      }
+                    }}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <Icon style={{ fontSize: 16, flexShrink: 0 }} />
+                    {!collapsed && item.label}
+                  </Link>
+                )
+              }
+
               return (
-                <Link
-                  key={item.key}
-                  to={item.key}
-                  data-testid={`nav-${item.key.replace('/', '') || 'dashboard'}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '10px 16px',
-                    margin: '2px 8px',
-                    borderRadius: 8,
-                    color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                    background: isActive ? 'var(--accent-soft)' : 'transparent',
-                    fontSize: 14,
-                    fontWeight: 500,
-                    textDecoration: 'none',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={e => {
-                    if (!isActive) {
-                      e.currentTarget.style.background = 'var(--bg-hover)'
-                      e.currentTarget.style.color = 'var(--text-primary)'
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (!isActive) {
-                      e.currentTarget.style.background = 'transparent'
-                      e.currentTarget.style.color = 'var(--text-secondary)'
-                    }
-                  }}
-                >
-                  <Icon style={{ fontSize: 16 }} />
-                  {item.label}
-                </Link>
+                <div key={group.key} style={{ marginBottom: 4 }}>
+                  {!collapsed && (
+                    <div
+                      style={{
+                        padding: '8px 16px 4px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: 'var(--text-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      {group.label}
+                    </div>
+                  )}
+                  {group.children.map(item => {
+                    const isActive = location.pathname === item.key
+                    const Icon = item.icon
+                    return (
+                      <Link
+                        key={item.key}
+                        to={item.key}
+                        data-testid={`nav-${item.key.replace('/', '')}`}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '8px 16px',
+                          margin: '2px 8px',
+                          borderRadius: 6,
+                          color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                          background: isActive ? 'var(--accent-soft)' : 'transparent',
+                          fontSize: 13,
+                          fontWeight: 500,
+                          textDecoration: 'none',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={e => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'var(--bg-hover)'
+                            e.currentTarget.style.color = 'var(--text-primary)'
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'transparent'
+                            e.currentTarget.style.color = 'var(--text-secondary)'
+                          }
+                        }}
+                        title={collapsed ? item.label : undefined}
+                      >
+                        <Icon style={{ fontSize: 15, flexShrink: 0 }} />
+                        {!collapsed && item.label}
+                      </Link>
+                    )
+                  })}
+                </div>
               )
             })}
           </nav>
@@ -381,44 +569,77 @@ export default function Layout() {
               gap: 8,
             }}
           >
-            <div
+            {!collapsed && (
+              <>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: 12,
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: '#22c55e',
+                        display: 'inline-block',
+                      }}
+                    />
+                    运行中
+                  </span>
+                  <span>v2.1.5</span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
+                  主题切换
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {themeList.map(t => (
+                    <button
+                      key={t.key}
+                      onClick={() => setTheme(t.key)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '4px 8px',
+                        borderRadius: 4,
+                        border: `1px solid ${currentTheme === t.key ? themeSwatches[t.key] : 'var(--border)'}`,
+                        background:
+                          currentTheme === t.key ? themeSwatches[t.key] + '15' : 'transparent',
+                        color: currentTheme === t.key ? themeSwatches[t.key] : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontSize: 11,
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {themeIcons[t.key]}
+                      {t.label.replace('主题', '')}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            <button
+              onClick={() => setCollapsed(!collapsed)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                fontSize: 12,
-                color: 'var(--text-muted)',
-              }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: '#22c55e',
-                    display: 'inline-block',
-                  }}
-                />
-                运行中
-              </span>
-              <span>v2.1.5</span>
-            </div>
-            <Link
-              to="/system-logs"
-              style={{
-                padding: '6px 12px',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                gap: 8,
+                padding: '8px 12px',
                 borderRadius: 6,
                 border: '1px solid var(--border)',
                 background: 'var(--bg-elevated)',
                 color: 'var(--text-secondary)',
                 fontSize: 12,
                 cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
                 transition: 'all 0.2s ease',
-                textDecoration: 'none',
+                marginTop: 4,
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.background = 'var(--bg-hover)'
@@ -429,9 +650,9 @@ export default function Layout() {
                 e.currentTarget.style.color = 'var(--text-secondary)'
               }}
             >
-              <FileTextOutlined style={{ fontSize: 12 }} />
-              系统日志
-            </Link>
+              {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              {!collapsed && '收起菜单'}
+            </button>
           </div>
         </aside>
 

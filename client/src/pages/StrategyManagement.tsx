@@ -1,56 +1,17 @@
 import { useState, useEffect } from 'react'
-import {
-  Card,
-  Table,
-  Button,
-  Tag,
-  Space,
-  Modal,
-  Form,
-  Input,
-  Select,
-  Typography,
-  Empty,
-  message,
-  Descriptions,
-  Tabs,
-  Row,
-  Col,
-} from 'antd'
-import {
-  ExperimentOutlined,
-  BookOutlined,
-  ThunderboltOutlined,
-  PlusOutlined,
-} from '@ant-design/icons'
+import { Modal, Form, Input, Select, Typography, message, Descriptions, Tabs, Table } from 'antd'
+import { ExperimentOutlined } from '@ant-design/icons'
 import { strategyApi } from '../services/api'
+import type { StrategyItem, StrategyVersion } from '../types/api'
+import BuiltinStrategyCards from './strategy/BuiltinStrategyCards'
+import CustomStrategyTable from './strategy/CustomStrategyTable'
 
 const { Title, Text } = Typography
 
-interface Strategy {
-  id: number
-  name: string
-  description?: string
-  category: string
-  strategy_code: string
-  params_schema?: Record<string, unknown>
-  is_builtin: number
-  is_active: number
-  created_at: string
-}
-
-interface StrategyVersion {
-  id: number
-  version_number: number
-  params_schema?: Record<string, unknown>
-  changelog?: string
-  created_at: string
-}
-
 export default function StrategyManagement() {
-  const [strategies, setStrategies] = useState<Strategy[]>([])
-  const [builtinStrategies, setBuiltinStrategies] = useState<Strategy[]>([])
-  const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null)
+  const [strategies, setStrategies] = useState<StrategyItem[]>([])
+  const [builtinStrategies, setBuiltinStrategies] = useState<StrategyItem[]>([])
+  const [selectedStrategy, setSelectedStrategy] = useState<StrategyItem | null>(null)
   const [versions, setVersions] = useState<StrategyVersion[]>([])
   const [loading, setLoading] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
@@ -68,10 +29,10 @@ export default function StrategyManagement() {
       const res = await strategyApi.getStrategies()
       if (res.data?.code === 0) {
         const all = res.data.data || []
-        setStrategies(all.filter((s: Strategy) => !s.is_builtin))
+        setStrategies(all.filter((s: StrategyItem) => !s.is_builtin))
       }
-    } catch (e) {
-      console.error(e)
+    } catch {
+      // ignore
     } finally {
       setLoading(false)
     }
@@ -80,22 +41,18 @@ export default function StrategyManagement() {
   const fetchBuiltinStrategies = async () => {
     try {
       const res = await strategyApi.getBuiltinStrategies()
-      if (res.data?.code === 0) {
-        setBuiltinStrategies(res.data.data || [])
-      }
-    } catch (e) {
-      console.error(e)
+      if (res.data?.code === 0) setBuiltinStrategies(res.data.data || [])
+    } catch {
+      // ignore
     }
   }
 
   const fetchVersions = async (strategyId: number) => {
     try {
       const res = await strategyApi.getVersions(strategyId)
-      if (res.data?.code === 0) {
-        setVersions(res.data.data || [])
-      }
-    } catch (e) {
-      console.error(e)
+      if (res.data?.code === 0) setVersions(res.data.data || [])
+    } catch {
+      // ignore
     }
   }
 
@@ -109,18 +66,15 @@ export default function StrategyManagement() {
         message.error('params_schema 不是有效的 JSON')
         return
       }
-      const res = await strategyApi.createStrategy({
-        ...values,
-        params_schema: paramsSchema,
-      })
+      const res = await strategyApi.createStrategy({ ...values, params_schema: paramsSchema })
       if (res.data?.code === 0) {
         message.success('策略创建成功')
         setShowCreate(false)
         form.resetFields()
         fetchStrategies()
       }
-    } catch (e) {
-      console.error(e)
+    } catch {
+      // ignore
     }
   }
 
@@ -136,204 +90,31 @@ export default function StrategyManagement() {
     }
   }
 
-  const openDetail = (strategy: Strategy) => {
+  const openDetail = (strategy: StrategyItem) => {
     setSelectedStrategy(strategy)
     fetchVersions(strategy.id)
     setShowDetail(true)
   }
 
-  const columns = [
-    {
-      title: '策略名称',
-      key: 'name',
-      render: (_: unknown, record: Strategy) => (
-        <Space>
-          <Text strong style={{ color: 'var(--text-primary)', fontSize: 15 }}>
-            {record.name}
-          </Text>
-          {record.is_builtin === 1 && (
-            <Tag
-              style={{
-                borderRadius: 6,
-                background: 'var(--accent-soft)',
-                color: 'var(--accent)',
-                border: 'none',
-              }}
-            >
-              内置
-            </Tag>
-          )}
-        </Space>
-      ),
-    },
-    {
-      title: '代码',
-      dataIndex: 'strategy_code',
-      key: 'strategy_code',
-      render: (v: string) => (
-        <Text style={{ color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{v}</Text>
-      ),
-    },
-    {
-      title: '类别',
-      dataIndex: 'category',
-      key: 'category',
-      render: (v: string) => (
-        <Tag
-          style={{
-            borderRadius: 6,
-            background: 'var(--bg-elevated)',
-            color: 'var(--text-secondary)',
-            border: 'none',
-          }}
-        >
-          {v === 'technical' ? '技术' : v === 'event' ? '事件' : v === 'combined' ? '组合' : v}
-        </Tag>
-      ),
-    },
-    {
-      title: '状态',
-      dataIndex: 'is_active',
-      key: 'is_active',
-      render: (v: number) => (
-        <Tag
-          style={{
-            borderRadius: 6,
-            background: v === 1 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-            color: v === 1 ? '#22c55e' : '#ef4444',
-            border: 'none',
-          }}
-        >
-          {v === 1 ? '活跃' : '停用'}
-        </Tag>
-      ),
-    },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_: unknown, record: Strategy) => (
-        <Space>
-          <Button type="link" size="small" onClick={() => openDetail(record)}>
-            详情
-          </Button>
-          {record.is_builtin !== 1 && (
-            <Button type="link" danger size="small" onClick={() => handleDelete(record.id)}>
-              删除
-            </Button>
-          )}
-        </Space>
-      ),
-    },
-  ]
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <Title level={3} style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>
+          <ExperimentOutlined style={{ marginRight: 10, color: 'var(--accent)' }} />
           策略管理
         </Title>
         <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>管理量化交易策略与参数配置</Text>
       </div>
 
-      {/* Builtin Strategies */}
-      <Card
-        style={{
-          background: 'var(--bg-surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-        }}
-        title={
-          <Space>
-            <BookOutlined style={{ color: 'var(--accent)' }} />
-            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>内置策略</span>
-          </Space>
-        }
-      >
-        {builtinStrategies.length === 0 ? (
-          <Empty description="暂无内置策略" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-        ) : (
-          <Row gutter={[16, 16]}>
-            {builtinStrategies.map(s => (
-              <Col key={s.id} xs={24} sm={12} lg={8}>
-                <Card
-                  hoverable
-                  onClick={() => openDetail(s)}
-                  style={{
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius-sm)',
-                    cursor: 'pointer',
-                  }}
-                  bodyStyle={{ padding: 16 }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                    <div
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 8,
-                        background: 'var(--accent-soft)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <ThunderboltOutlined style={{ color: 'var(--accent)', fontSize: 18 }} />
-                    </div>
-                    <div>
-                      <Text strong style={{ color: 'var(--text-primary)', fontSize: 15 }}>
-                        {s.name}
-                      </Text>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: 'var(--text-muted)',
-                          fontFamily: 'monospace',
-                        }}
-                      >
-                        {s.strategy_code}
-                      </div>
-                    </div>
-                  </div>
-                  <Text style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                    {s.description}
-                  </Text>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        )}
-      </Card>
+      <BuiltinStrategyCards strategies={builtinStrategies} onSelect={openDetail} />
 
-      {/* Custom Strategies */}
-      <Card
-        style={{
-          background: 'var(--bg-surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-        }}
-        title={
-          <Space>
-            <ExperimentOutlined style={{ color: 'var(--accent)' }} />
-            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>自定义策略</span>
-          </Space>
-        }
-        extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowCreate(true)}>
-            新建策略
-          </Button>
-        }
-      >
-        <Table
-          columns={columns}
-          dataSource={strategies}
-          rowKey="id"
-          loading={loading}
-          pagination={false}
-          size="small"
-          locale={{ emptyText: '暂无自定义策略' }}
-        />
-      </Card>
+      <CustomStrategyTable
+        strategies={strategies}
+        loading={loading}
+        onDetail={openDetail}
+        onDelete={handleDelete}
+        onCreate={() => setShowCreate(true)}
+      />
 
       {/* Create Modal */}
       <Modal
@@ -366,7 +147,9 @@ export default function StrategyManagement() {
           <Form.Item name="params_schema" label="参数 Schema (JSON)">
             <Input.TextArea
               rows={6}
-              placeholder={`{\n  "type": "object",\n  "properties": {\n    "short": { "type": "integer", "minimum": 2, "maximum": 60, "default": 5 }\n  }\n}`}
+              placeholder={
+                '{\n  "type": "object",\n  "properties": {\n    "short": { "type": "integer" }\n  }\n}'
+              }
             />
           </Form.Item>
         </Form>
@@ -421,7 +204,6 @@ export default function StrategyManagement() {
                   <Table
                     dataSource={versions}
                     rowKey="id"
-                    size="small"
                     pagination={false}
                     style={{ marginTop: 8 }}
                     columns={[
@@ -430,7 +212,7 @@ export default function StrategyManagement() {
                         title: '变更说明',
                         dataIndex: 'changelog',
                         key: 'changelog',
-                        render: (v: string) => v || '-',
+                        render: (v: string | null) => v || '-',
                       },
                       {
                         title: '创建时间',
